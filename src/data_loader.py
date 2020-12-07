@@ -4,7 +4,19 @@ import torch
 
 class EntityDataset:
     """
+    This class produces the input for the model as masked langague model with its special tokens
+    , ids, masks and padding, creating a getitem method that produces the batches.
     Data must be preprocessed before using this class as a list of words to be tokenized
+    Input:
+        - text (list): list of words
+        - pos (list): list of pos associated
+        - tag (list): list of tags associated
+    Output:
+        - ids:
+        - masks:
+        - tokens:
+        - pos:
+        - tags:
     """
 
     def __init__(self, texts, pos, tags):
@@ -36,7 +48,7 @@ class EntityDataset:
             target_pos.extend([pos[i]] * input_len)
             target_tag.extend([tags[i]] * input_len)
 
-            # Adding spacy for the spectial tokens
+            # Adding spacy for the special tokens
             ids = ids[:config.MAX_LEN - 2]
             target_pos = target_pos[:config.MAX_LEN - 2]
             target_tag = target_tag[:config.MAX_LEN - 2]

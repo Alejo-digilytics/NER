@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     # Split training set with skl
     train_sentences, test_sentences, train_pos, test_pos, train_tag, test_tag \
-        = model_selection.train_test_split(sentences, pos, tag, random_state=1, test_size=0.2)
+        = model_selection.train_test_split(sentences, pos, tag, random_state=42, test_size=0.2)
 
     # Format based on EntityDataset
     train = data_loader.EntityDataset(texts=train_sentences, pos=train_pos, tags=train_tag)
