@@ -25,14 +25,6 @@ def loss_function(output, target, mask, num_labels):
     return loss
 
 
-class finbert_model(nn.Module):
-    def __init__(self):
-        super(finbert_model, self).__init__()
-        self.finbert = torch.load(output_model_file)
-
-    def forward(self, ids, mask, tokens_type_ids, target_pos, target_tag):
-        pass
-
 
 class BERT_entities(nn.Module):
     def __init__(self, num_tag, num_pos):
