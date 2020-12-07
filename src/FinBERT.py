@@ -29,6 +29,7 @@ def loss_function(output, target, mask, num_labels):
 class BERT_entities(nn.Module):
     def __init__(self, num_tag, num_pos):
         super(BERT_entities, self).__init__()
+        # TODO: can I call in this way for other models?
         self.bert = transformers.BertModel.from_pretrained(config.BASE_MODEL_PATH_B)
         # NER parameters
         self.num_tag = num_tag
