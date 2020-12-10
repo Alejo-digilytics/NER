@@ -17,7 +17,6 @@ class NER:
         self.tag_std = None
         self.device = None
 
-
     def data_preprocess(self, saving=True):
         logging.info("Loading data")
         sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE)
@@ -101,25 +100,17 @@ class NER:
             pass
 
         # preprocessing
-        text = self.config.TOKENIZER.encode(text)
         sentence = text.split()
-        tets_text = NER_dataset(texts=sentence, pos=[[0]* len(sentence)], tags=[[0] * len(sentence)])
+        text = self.config.TOKENIZER.encode(text)
+        tets_text = NER_dataset(texts=[sentence], pos=[[0] * len(sentence)], tags=[[0] * len(sentence)])
 
         self.model_device()
 
         with torch.no_grad():
-            data = test_dataset[0]
+            data = tets_text[0]
             for k, v in data.items():
                 data[k] = v.to(device).unsqueeze(0)
             tag, pos, _ = model(**data)
 
-            print(
-                enc_tag.inverse_transform(
-                    tag.argmax(2).cpu().numpy().reshape(-1)
-                )[:len(tokenized_sentence)]
-            )
-            print(
-                enc_pos.inverse_transform(
-                    pos.argmax(2).cpu().numpy().reshape(-1)
-                )[:len(tokenized_sentence)]
-            )
+            print(tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
+            print(pos_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
