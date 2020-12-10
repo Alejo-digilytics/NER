@@ -1,5 +1,6 @@
 from tqdm import tqdm
 import torch.nn as nn
+import torch
 
 
 def train(data_loader, model, optimizer, device, scheduler):

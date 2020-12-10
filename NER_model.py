@@ -7,6 +7,8 @@ from src.tools import check_device, preprocess_data_BERT
 from src.model import BERT_NER
 import joblib
 import logging
+import numpy as np
+
 
 
 class NER:
@@ -17,7 +19,7 @@ class NER:
         self.tag_std = None
         self.device = None
 
-    def data_preprocess(self, saving=True):
+    def train(self, saving=True):
         logging.info("Loading data")
         sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE)
 
@@ -47,38 +49,10 @@ class NER:
         self.train_data_loader = DataLoader(self.train, batch_size=self.config.TRAIN_BATCH_SIZE,
                                             num_workers=4)  # 4 subprocess
         self.test_data_loader = DataLoader(self.test, batch_size=self.config.VALID_BATCH_SIZE, num_workers=4)
+
         self.model_device(phase="train", num_tag=num_tag, num_pos=num_pos)
+        self.hyperparameters()
 
-    def model_device(self, phase, num_tag, num_pos):
-        # Use GPU, load model and move it there -- device or cpu if cuda is not available
-        self.device = check_device()
-        self.model = BERT_NER(num_tag=num_tag, num_pos=num_pos)
-        if phase == "train":
-            self.model.to(self.device)
-        elif phase == "predict":
-            self.model.load_state_dict(torch.load(self.config.MODEL_PATH))
-            self.model.to(self.device)
-        else:
-            pass
-
-    def hyperparameters(self):
-        # nn.module list of parameters: all parameters from BERT plus the pos and tag layer
-        self.param_optimizer = list(self.model.named_parameters())
-        no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
-        optimizer_parameters = [
-            {"params": [p for n, p in self.param_optimizer if not any(nd in n for nd in no_decay)],
-             "weight_decay": 0.001},
-            {"params": [p for n, p in self.param_optimizer if any(nd in n for nd in no_decay)],
-             "weight_decay": 0.0}]
-
-        num_train_steps = int(len(self.train_sentences) / self.config.TRAIN_BATCH_SIZE * self.config.EPOCHS)
-        self.optimizer = AdamW(optimizer_parameters, lr=3e-5)
-
-        # Scheduler
-        self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps=0,
-                                                         num_training_steps=num_train_steps)
-
-    def train(self):
         # Loss
         best_loss = np.inf
         for epoch in range(self.config.EPOCHS):
@@ -117,3 +91,32 @@ class NER:
 
             print(tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
             print(pos_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
+
+    def model_device(self, phase, num_tag, num_pos):
+        # Use GPU, load model and move it there -- device or cpu if cuda is not available
+        self.device = check_device()
+        self.model = BERT_NER(num_tag=num_tag, num_pos=num_pos)
+        if phase == "train":
+            self.model.to(self.device)
+        elif phase == "predict":
+            self.model.load_state_dict(torch.load(self.config.MODEL_PATH))
+            self.model.to(self.device)
+        else:
+            pass
+
+    def hyperparameters(self):
+        # nn.module list of parameters: all parameters from BERT plus the pos and tag layer
+        self.param_optimizer = list(self.model.named_parameters())
+        no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
+        optimizer_parameters = [
+            {"params": [p for n, p in self.param_optimizer if not any(nd in n for nd in no_decay)],
+             "weight_decay": 0.001},
+            {"params": [p for n, p in self.param_optimizer if any(nd in n for nd in no_decay)],
+             "weight_decay": 0.0}]
+
+        num_train_steps = int(len(self.train_sentences) / self.config.TRAIN_BATCH_SIZE * self.config.EPOCHS)
+        self.optimizer = AdamW(optimizer_parameters, lr=3e-5)
+
+        # Scheduler
+        self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps=0,
+                                                         num_training_steps=num_train_steps)

@@ -1,4 +1,8 @@
-## NER with Mortgage BERT
+## NER with BERT like models
+This repository fine tunes for a NER task.
+The data must be added to the folder Data/NER_data as a csv with 4 columns:
+
+Sentence, Word, Pos, Tag
 
 
 ### Launch
