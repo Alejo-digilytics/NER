@@ -1,6 +1,13 @@
 import torch
+import pandas as pd
+
+from sklearn import preprocessing as prep
+from sklearn import model_selection
 
 def check_device():
+    """
+    This function checks the cuda's setting
+    """
     if torch.cuda.is_available():
         device = torch.device("cuda")
         print('There are %d GPU(s) available.' % torch.cuda.device_count())
@@ -14,6 +21,17 @@ def check_device():
 
 
 def preprocess_data_BERT(data_path):
+    """
+    This function standardizes the pos and tag columns from the dataframe
+    Input:
+        - data_path (str): path to the DF : Sentence, word, pos, tag
+    Output:
+        - sentences (pd serie): contains sentences
+        - pos (pd serie): contains pos
+        - tag (pd serie): contains tag
+        - pos_std (pd serie): contains pos_std standardized
+        - tag_std (pd serie): contains tag_std standardized
+    """
 
     # The data from the df comes with 4 columns> Sentence, word, pos, tag
     # read df
@@ -22,16 +40,16 @@ def preprocess_data_BERT(data_path):
     cols = df.columns.tolist()
     df[cols[0]] = df[cols[0]].fillna(method="ffill")
 
-    # Encoding tags and pos, which will be added as columns
-    tag_enc = prep.LabelEncoder()
-    pos_enc = prep.LabelEncoder()
+    # Encoding tags and pos for preprocessing, which will be added as columns
+    tag_std = prep.LabelEncoder()
+    pos_std = prep.LabelEncoder()
 
-    # We need to preserve the class LabelEncoder
-    df["POS"] = pos_enc.fit_transform(df["POS"])
-    df["Tag"] = tag_enc.fit_transform(df["Tag"])
+    # using fit_transform we standardize the distributions of POS and tag
+    df["POS"] = pos_std.fit_transform(df["POS"])
+    df["Tag"] = tag_std.fit_transform(df["Tag"])
 
     # Convert into lists of lists and group by sentence
     sentences = df.groupby(cols[0])["Word"].apply(list).values
     pos = df.groupby(cols[0])["POS"].apply(list).values
     tag = df.groupby(cols[0])["Tag"].apply(list).values
-    return sentences, pos, tag, pos_enc, tag_enc
+    return sentences, pos, tag, pos_std, tag_std

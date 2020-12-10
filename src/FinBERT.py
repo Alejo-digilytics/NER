@@ -26,10 +26,10 @@ def loss_function(output, target, mask, num_labels):
 
 
 
-class BERT_entities(nn.Module):
+class BERT_NER(nn.Module):
     def __init__(self, num_tag, num_pos):
-        super(BERT_entities, self).__init__()
-        # TODO: can I call in this way for other models?
+        super(BERT_NER, self).__init__()
+        # TODO: can I call in this way to Finbert?
         self.bert = transformers.BertModel.from_pretrained(config.BASE_MODEL_PATH_B)
         # NER parameters
         self.num_tag = num_tag

@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 def train(data_loader, model, optimizer, device, scheduler):
     """
-        -  data_loader: EntityDataset object
+        -  data_loader: NER_dataset object
         -  model: BERT or another
         -  optimizer: optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
         -  device: cuda
@@ -34,7 +34,7 @@ def train(data_loader, model, optimizer, device, scheduler):
 
 def validation(data_loader, model, device):
     """
-        -  data_loader: EntityDataset object
+        -  data_loader: NER_dataset object
         -  model: BERT or another
         -  device: cuda
     """

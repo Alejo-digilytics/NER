@@ -6,7 +6,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 import src.config_data_loader as config
 from src import data_loader, train_finbert
 from src.tools import check_device, preprocess_data_BERT
-from src.FinBERT import BERT_entities
+from src.FinBERT import BERT_NER
 
 if __name__ == '__main__':
     sentences, pos, tag, pos_enc, tag_enc = preprocess_data_BERT(config.TRAINING_FILE)
@@ -23,18 +23,17 @@ if __name__ == '__main__':
     train_sentences, test_sentences, train_pos, test_pos, train_tag, test_tag \
         = model_selection.train_test_split(sentences, pos, tag, random_state=42, test_size=0.2)
 
-    # Format based on EntityDataset
-    train = data_loader.EntityDataset(texts=train_sentences, pos=train_pos, tags=train_tag)
-    test = data_loader.EntityDataset(texts=test_sentences, pos=test_pos, tags=test_tag)
+    # Format based on NER_dataset
+    train = data_loader.NER_dataset(texts=train_sentences, pos=train_pos, tags=train_tag)
+    test = data_loader.NER_dataset(texts=test_sentences, pos=test_pos, tags=test_tag)
 
-    # Loaders
+    # Loaders from torch
     train_data_loader = DataLoader(train, batch_size=config.TRAIN_BATCH_SIZE, num_workers=4)
     test_data_loader = DataLoader(test, batch_size=config.VALID_BATCH_SIZE, num_workers=4)
 
-    # Use GPU and move model there -- device
-    device = torch.device("cuda")
+    # Use GPU, load model and move it there -- device or cpu if cuda is not available
     check_device()
-    model = BERT_entities(num_tag=num_tag, num_pos=num_pos)
+    model = BERT_NER(num_tag=num_tag, num_pos=num_pos)
     model.to(device)
 
     # Optimizer TODO: to revise

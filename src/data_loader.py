@@ -1,10 +1,9 @@
 import src.config_data_loader as config
 import torch
 
-
-class EntityDataset:
+class NER_Dataset:
     """
-    This class produces the input for the model as masked langague model with its special tokens
+    This class produces the input for the model as masked language model with its special tokens
     , ids, masks and padding, creating a getitem method that produces the batches.
     Data must be preprocessed before using this class as a list of words to be tokenized
     Input:
@@ -38,13 +37,16 @@ class EntityDataset:
         target_pos = []
         target_tag = []
 
-        for i, s in enumerate(text):
+        for i, s in enumerate(text): # i = position, s = words
+            # token id from Bert tokenizer
             inputs = config.TOKENIZER.encode(
                 s,
                 add_special_tokens=False
             )
             input_len = len(inputs)
             ids.extend(inputs)
+            # words had become tokens and the size increase.
+            # So, the pos and tags too
             target_pos.extend([pos[i]] * input_len)
             target_tag.extend([tags[i]] * input_len)
 
@@ -58,7 +60,7 @@ class EntityDataset:
             target_pos = [0] + target_pos + [0]
             target_tag = [0] + target_tag + [0]
 
-            # Prepare masks
+            # Prepare masks: 1 means token
             mask = [1] * len(ids)
             tokens_type_ids = [0] * len(ids)
 
