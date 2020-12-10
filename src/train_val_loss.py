@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import torch.nn as nn
 
 
 def train(data_loader, model, optimizer, device, scheduler):
@@ -31,6 +32,30 @@ def train(data_loader, model, optimizer, device, scheduler):
         final_loss += loss.item()
     return final_loss / len(data_loader)
 
+
+def loss_function(output, target, mask, num_labels):
+    """
+    
+    output:
+        - output: 
+        - target: 
+        - mask: 
+        - num_labels:
+    Input:
+        - loss:
+    """
+    # Cross entropy for classification
+    lfn = nn.CrossEntropyLoss()
+    # Just for those tokens which are not padding ---> active
+    active_loss = mask.view(-1) == 1
+    active_logits = output.view(-1, num_labels)
+    active_labels = torch.where(
+        active_loss,
+        target.view(-1),
+        torch.tensor(lfn.ignore_index).type_as(target)
+    )
+    loss = lfn(active_logits, active_labels)
+    return loss
 
 def validation(data_loader, model, device):
     """

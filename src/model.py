@@ -1,29 +1,8 @@
-import os
 import torch
 import torch.nn as nn
 import src.config_data_loader as config
 import transformers
-
-# paths
-output_dir = os.path.join(os.path.split(os.getcwd())[0], "Data", "FinBERT_base")
-output_model_file = os.path.join(output_dir, "finbert_vocab_uncased.bin")
-output_config_file = os.path.join(output_dir, "config_fb.json")
-
-
-def loss_function(output, target, mask, num_labels):
-    # Cross entropy for classification
-    lfn = nn.CrossEntropyLoss()
-    # Just for those tokens which are not padding ---> active
-    active_loss = mask.view(-1) == 1
-    active_logits = output.view(-1, num_labels)
-    active_labels = torch.where(
-        active_loss,
-        target.view(-1),
-        torch.tensor(lfn.ignore_index).type_as(target)
-    )
-    loss = lfn(active_logits, active_labels)
-    return loss
-
+from src.train_val_loss import loss_function
 
 
 class BERT_NER(nn.Module):
@@ -35,7 +14,7 @@ class BERT_NER(nn.Module):
         self.num_tag = num_tag
         self.num_pos = num_pos
         # TODO: Check the best architecture after the base model for fine tuning.
-        # Extra layers for fine-tuning
+        # Extra layers for fine-tuning FeedFordward layer with 30% of dropout in both
         self.bert_drop_1 = nn.Dropout(0.3)
         self.bert_drop_2 = nn.Dropout(0.3)
         # 768 (BERT) composed with a linear function

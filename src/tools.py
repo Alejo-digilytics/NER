@@ -1,8 +1,6 @@
 import torch
 import pandas as pd
-
 from sklearn import preprocessing as prep
-from sklearn import model_selection
 
 def check_device():
     """

@@ -1,7 +1,7 @@
 import src.config_data_loader as config
 import torch
 
-class NER_Dataset:
+class NER_dataset:
     """
     This class produces the input for the model as masked language model with its special tokens
     , ids, masks and padding, creating a getitem method that produces the batches.
