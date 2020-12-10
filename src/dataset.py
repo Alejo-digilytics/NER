@@ -1,7 +1,8 @@
 import src.config_data_loader as config
 import torch
 
-class NER_dataset:
+
+class Entities_dataset:
     """
     This class produces the input for the model as masked language model with its special tokens
     , ids, masks and padding, creating a getitem method that produces the batches.
@@ -17,7 +18,6 @@ class NER_dataset:
         - pos:
         - tags:
     """
-
     def __init__(self, texts, pos, tags):
         # text = [["hi","I", "am"], ["And", ...]...]
         # pos/tags = [[1,2,3,4, ...], [...]...]
@@ -37,7 +37,7 @@ class NER_dataset:
         target_pos = []
         target_tag = []
 
-        for i, s in enumerate(text): # i = position, s = words
+        for i, s in enumerate(text):  # i = position, s = words
             # token id from Bert tokenizer
             inputs = config.TOKENIZER.encode(
                 s,
