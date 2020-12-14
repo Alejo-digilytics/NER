@@ -19,7 +19,7 @@ class Entities_dataset:
         - tags:
     """
     def __init__(self, texts, pos, tags):
-        # text = [["hi","I", "am"], ["And", ...]...]
+        # text = [["hi","I", "am", ...], ["And", ...]...]
         # pos/tags = [[1,2,3,4, ...], [...]...]
         self.texts = texts
         self.pos = pos

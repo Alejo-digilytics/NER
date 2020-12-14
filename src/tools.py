@@ -18,22 +18,22 @@ def check_device():
     return device
 
 
-def preprocess_data_BERT(data_path):
+def preprocess_data_BERT(data_path, my_encoding="utf8"):
     """
     This function standardizes the pos and tag columns from the dataframe
     Input:
         - data_path (str): path to the DF : Sentence, word, pos, tag
     Output:
-        - sentences (pd serie): contains sentences
-        - pos (pd serie): contains pos
-        - tag (pd serie): contains tag
-        - pos_std (pd serie): contains pos_std standardized
-        - tag_std (pd serie): contains tag_std standardized
+        - sentences (ndarray): contains sentences
+        - pos (ndarray): contains pos
+        - tag (ndarray): contains tag
+        - pos_std (ndarray): contains pos_std standardized
+        - tag_std (ndarray): contains tag_std standardized
     """
 
     # The data from the df comes with 4 columns> Sentence, word, pos, tag
     # read df
-    df = pd.read_csv(data_path, encoding="latin-1")
+    df = pd.read_csv(data_path, encoding=my_encoding)
     # Get columns names
     cols = df.columns.tolist()
     df[cols[0]] = df[cols[0]].fillna(method="ffill")

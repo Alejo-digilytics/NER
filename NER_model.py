@@ -12,16 +12,18 @@ import numpy as np
 
 
 class NER:
-    def __init__(self):
+    def __init__(self, encoding):
         self.config = config
         self.loss = [[], []]
         self.pos_std = None
         self.tag_std = None
         self.device = None
+        self.encoding = encoding
 
     def train(self, saving=True):
         logging.info("Loading data")
-        sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE)
+        # the following output are np.arrays
+        sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE, self.encoding)
 
         if saving:
             # Check point for the standardized pos and tag
@@ -50,10 +52,11 @@ class NER:
                                             num_workers=4)  # 4 subprocess
         self.test_data_loader = DataLoader(self.test, batch_size=self.config.VALID_BATCH_SIZE, num_workers=4)
 
+        # Load tensor to device and hyperparameters
         self.model_device(phase="train", num_tag=num_tag, num_pos=num_pos)
         self.hyperparameters()
 
-        # Loss
+        # Loss and training
         best_loss = np.inf
         for epoch in range(self.config.EPOCHS):
             train_loss = train_val_loss.train(self.train_data_loader, self.model, self.optimizer,
