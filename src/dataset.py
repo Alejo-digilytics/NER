@@ -65,7 +65,7 @@ class Entities_dataset:
             tokens_type_ids = [0] * len(ids)
 
             # PADDING FIXED, NOT DYNAMIC
-            padding_len = config.MAX_LEN - len(ids)  # TODO: switch to dynamic padding
+            padding_len = config.MAX_LEN - len(ids)
             ids = ids + ([0] * padding_len)
             tokens_type_ids = tokens_type_ids + ([0] * padding_len)
             mask = mask + ([0] * padding_len)

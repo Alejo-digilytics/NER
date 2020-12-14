@@ -5,7 +5,7 @@ import torch
 
 def train(data_loader, model, optimizer, device, scheduler):
     """
-        -  data_loader: NER_dataset object
+        -  data_loader: pytorch.DataLoader object
         -  model: BERT or another
         -  optimizer: optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
         -  device: cuda
@@ -19,7 +19,7 @@ def train(data_loader, model, optimizer, device, scheduler):
         for key, value in data.items():
             data[key] = value.to(device)
         # Always clear any previously calculated gradients before performing a BP
-        # PyTorch doesn't do this automatically because accumulating the gradients is
+        # PyTorch doesn't do it automatically because accumulating the gradients is
         # "convenient while training RNNs"
         model.zero_grad()
         # Take care that they use the same names that in data_loader:
@@ -60,7 +60,7 @@ def loss_function(output, target, mask, num_labels):
 
 def validation(data_loader, model, device):
     """
-        -  data_loader: NER_dataset object
+        -  data_loader: pytorch.DataLoader object
         -  model: BERT or another
         -  device: cuda
     """
