@@ -36,33 +36,34 @@ def train(data_loader, model, optimizer, device, scheduler):
 
 def loss_function(output, target, mask, num_labels):
     """
-    
+    This loss function is a Cross Entropy function since there is no entity overlaping
     output:
-        - output: 
-        - target: 
+        - output: torch tensor, output of the last layer of the network
+        - target: the tensor representing the correct class
         - mask: 
-        - num_labels:
+        - num_labels: Number of labels in the sequence. Maximum minus the padding
     Input:
-        - loss:
+        - loss: the result of the loss function, tensor of floats?
     """
     # Cross entropy for classification
-    lfn = nn.CrossEntropyLoss()
+    loss_function = nn.CrossEntropyLoss()
+
     # Just for those tokens which are not padding ---> active
     active_loss = mask.view(-1) == 1
     active_logits = output.view(-1, num_labels)
     active_labels = torch.where(
         active_loss,
         target.view(-1),
-        torch.tensor(lfn.ignore_index).type_as(target)
+        torch.tensor(loss_function.ignore_index).type_as(target)
     )
-    loss = lfn(active_logits, active_labels)
+    loss = loss_function(active_logits, active_labels)
     return loss
 
 def validation(data_loader, model, device):
     """
         -  data_loader: pytorch.DataLoader object
         -  model: BERT or another
-        -  device: cuda
+        -  device: cuda if possible, also gpu or cpu
     """
     model.eval()
     # Fix a top for the loss
@@ -70,7 +71,7 @@ def validation(data_loader, model, device):
     for data in tqdm(data_loader, total=len(data_loader)):
         for key, val in data.items():
             data[key] = val.to(device)
-            # Take care that they use the same names that in data_loader:
+            # we might take care that we are using the same names that in data_loader:
             # "ids" "mask" "tokens_type_ids" "target_pos" "target_tag"
             _, _, loss = model(**data)
             final_loss += loss.item()

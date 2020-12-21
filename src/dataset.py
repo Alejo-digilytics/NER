@@ -1,4 +1,4 @@
-import src.config_data_loader as config
+import Data.configurations.config as config
 import torch
 
 
@@ -8,22 +8,21 @@ class Entities_dataset:
     , ids, masks and padding, creating a getitem method that produces the batches.
     Data must be preprocessed before using this class as a list of words to be tokenized
     Input:
-        - text (list): list of words
-        - pos (list): list of pos associated
-        - tag (list): list of tags associated
+        - text (list(list(), ..): list of lists of words [["hi","I", "am", ...], ["And", ...]...]
+        - pos (list(list(), ..): list of lists of pos associated [[1,2,3,4, ...], [...]...]
+        - tag (list(list(), ..): list of lists of tags associated [["O","O","[BLABLA-B]",...], [...]...]
     Output:
-        - ids:
-        - masks:
-        - tokens:
-        - pos:
-        - tags:
+        - ids (np.array): token's ids array
+        - masks (np.array): 1 if token 0 if padding
+        - tokens (np.array): token's array
+        - pos (np.array): part of speech array
+        - tags (np.array): NER's tags array
     """
-    def __init__(self, texts, pos, tags):
-        # text = [["hi","I", "am", ...], ["And", ...]...]
-        # pos/tags = [[1,2,3,4, ...], [...]...]
+    def __init__(self, texts, pos, tags, tokenizer):
         self.texts = texts
         self.pos = pos
         self.tags = tags
+        self.tokenizer = tokenizer
 
     def __len__(self):
         return len(self.texts)
@@ -39,12 +38,13 @@ class Entities_dataset:
 
         for i, s in enumerate(text):  # i = position, s = words
             # token id from Bert tokenizer
-            inputs = config.TOKENIZER.encode(
+            inputs = self.tokenizer.encode(
                 s,
                 add_special_tokens=False
             )
             input_len = len(inputs)
             ids.extend(inputs)
+
             # words had become tokens and the size increase.
             # So, the pos and tags too
             target_pos.extend([pos[i]] * input_len)

@@ -1,37 +1,51 @@
 from sklearn import model_selection
 from torch.utils.data import DataLoader
 from transformers import AdamW, get_linear_schedule_with_warmup
-import src.config_data_loader as config
+import transformers
+import Data.configurations.config as config
 from src import train_val_loss, dataset
 from src.tools import check_device, preprocess_data_BERT
 from src.model import BERT_NER
 import joblib
 import logging
 import numpy as np
-
+from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, BertConfig
 
 
 class NER:
-    def __init__(self, encoding):
+    def __init__(self, encoding, base_model="bert_base_uncased"):
+        """ There are only two base_model options allowed: "bert_base_uncased" and "finbert_vocab_uncased" """
         self.config = config
         self.loss = [[], []]
         self.pos_std = None
         self.tag_std = None
         self.device = None
         self.encoding = encoding
+        self.base_model = base_model
+
+        # Fix the tokenizer
+        if base_model == "bert_base_uncased":
+            self.tokenizer = transformers.BertTokenizer.from_pretrained(BERT_PATH,
+                                                                        do_lower_case=True)
+        elif base_model == "finbert_vocab_uncased":
+            self.tokenizer = BertTokenizer(vocab_file=FINBERT_VOCABULARY_PATH,
+                                           do_lower_case=True,
+                                           do_basic_tokenize=True)
 
     def train(self, saving=True):
         logging.info("Loading data")
-        # the following output are np.arrays
-        sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE, self.encoding)
 
+        # We preprocess and normalize the data and output it as np.arrays/ pd.series
+        sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE,
+                                                                               self.encoding)
+
+        # Checkpoint for the standardized pos and tag
         if saving:
-            # Check point for the standardized pos and tag
             data_check_pt = {
                 "pos_std": self.pos_std,
                 "tag_std": self.tag_std
             }
-            joblib.dump(data_check_pt, "std_data.bin")
+            joblib.dump(data_check_pt, CHECKPOINTS_PATH)
         else:
             pass
 
@@ -43,25 +57,41 @@ class NER:
         self.train_sentences, self.test_sentences, self.train_pos, self.test_pos, self.train_tag, self.test_tag \
             = model_selection.train_test_split(sentences, pos, tag, random_state=42, test_size=0.2)
 
-        # Format based on Entities_dataset; they are pd.DF
-        self.train = dataset.Entities_dataset(texts=self.train_sentences, pos=self.train_pos, tags=self.train_tag)
-        self.test = dataset.Entities_dataset(texts=self.test_sentences, pos=self.test_pos, tags=self.test_tag)
+        # Format based on Entities_dataset: getitem outputs pandas dataframes
+        self.train = dataset.Entities_dataset(texts=self.train_sentences,
+                                              pos=self.train_pos,
+                                              tags=self.train_tag,
+                                              tokenizer=self.tokenizer
+                                              )
+
+        self.test = dataset.Entities_dataset(texts=self.test_sentences,
+                                             pos=self.test_pos,
+                                             tags=self.test_tag,
+                                             tokenizer=self.tokenizer
+                                             )
 
         # Loaders from torch: it formats the data for pytorch and fixes the batch and the num of kernels
-        self.train_data_loader = DataLoader(self.train, batch_size=self.config.TRAIN_BATCH_SIZE,
-                                            num_workers=4)  # 4 subprocess
-        self.test_data_loader = DataLoader(self.test, batch_size=self.config.VALID_BATCH_SIZE, num_workers=4)
+        # "workers" means subprocess no gpus in the cuda
+        self.train_data_loader = DataLoader(self.train,
+                                            batch_size=self.config.TRAIN_BATCH_SIZE,
+                                            num_workers=4)
+        self.test_data_loader = DataLoader(self.test,
+                                           batch_size=self.config.VALID_BATCH_SIZE,
+                                           num_workers=4)
 
         # Load tensor to device and hyperparameters
         self.model_device(phase="train", num_tag=num_tag, num_pos=num_pos)
         self.hyperparameters()
 
-        # Loss and training
+        # initialize the loss
         best_loss = np.inf
+
+        # EPOCHS
         for epoch in range(self.config.EPOCHS):
-            train_loss = train_val_loss.train(self.train_data_loader, self.model, self.optimizer,
-                                              self.device, self.scheduler)
-            test_loss = train_val_loss.validation(self.test_data_loader, self.model, self.device)
+            train_loss = train_val_loss.train(self.train_data_loader, self.model,
+                                              self.optimizer, self.device, self.scheduler)
+            test_loss = train_val_loss.validation(self.test_data_loader, self.model,
+                                                  self.device)
             print("Train Loss = {} test Loss = {}".format(train_loss, test_loss))
             self.loss[0].extend(train_loss)
             self.loss[1].extend(test_loss)
@@ -96,7 +126,8 @@ class NER:
             print(pos_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
 
     def model_device(self, phase, num_tag, num_pos):
-        # Use GPU, load model and move it there -- device or cpu if cuda is not available
+        """ Use GPU, load model and move it there -- device or cpu if cuda is not available """
+
         self.device = check_device()
         self.model = BERT_NER(num_tag=num_tag, num_pos=num_pos)
         if phase == "train":
@@ -108,8 +139,12 @@ class NER:
             pass
 
     def hyperparameters(self):
+        """ This method fix the parameters and makes a filter over to exclude LayerNorm and biases """
+
         # nn.module list of parameters: all parameters from BERT plus the pos and tag layer
         self.param_optimizer = list(self.model.named_parameters())
+
+        #  exclude LayerNorm and biases
         no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
         optimizer_parameters = [
             {"params": [p for n, p in self.param_optimizer if not any(nd in n for nd in no_decay)],

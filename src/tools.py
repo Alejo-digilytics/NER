@@ -4,7 +4,9 @@ from sklearn import preprocessing as prep
 
 def check_device():
     """
-    This function checks the cuda's setting
+    This function checks the cuda's setting. It prints the setting
+    Output:
+        - device: the device object for torch to load the model into
     """
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -32,9 +34,9 @@ def preprocess_data_BERT(data_path, my_encoding="utf8"):
     """
 
     # The data from the df comes with 4 columns> Sentence, word, pos, tag
-    # read df
     df = pd.read_csv(data_path, encoding=my_encoding)
-    # Get columns names
+
+    # Get columns names and fill possible Nan values
     cols = df.columns.tolist()
     df[cols[0]] = df[cols[0]].fillna(method="ffill")
 
@@ -50,4 +52,5 @@ def preprocess_data_BERT(data_path, my_encoding="utf8"):
     sentences = df.groupby(cols[0])["Word"].apply(list).values
     pos = df.groupby(cols[0])["POS"].apply(list).values
     tag = df.groupby(cols[0])["Tag"].apply(list).values
+
     return sentences, pos, tag, pos_std, tag_std
