@@ -1,6 +1,5 @@
-import torch
 import torch.nn as nn
-import Data.configurations.config as config
+import src.config as config
 import transformers
 from src.train_val_loss import loss_function
 from pytorch_pretrained_bert import BertModel, BertConfig
@@ -11,7 +10,8 @@ class BERT_NER(nn.Module):
         super(BERT_NER, self).__init__()
 
         if base_model == "bert_base_uncased":
-            self.model = BertModel.from_pretrained(config.BASE_MODEL_PATH_B)
+            # self.model = BertModel.from_pretrained("bert-base-uncased")
+            self.model = transformers.BertModel.from_pretrained(config.BERT_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30522,
                                      hidden_size=768,
                                      num_hidden_layers=12,
@@ -24,8 +24,8 @@ class BERT_NER(nn.Module):
                                      type_vocab_size=2,
                                      initializer_range=0.02
                                      )
-        if base_model == "finbert_vocab_uncased":
-            self.model = BertModel.from_pretrained(base_model_path)
+        if base_model == "finbert-uncased":
+            self.model = BertModel.from_pretrained(config.FINBERT_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30873,
                                      hidden_size=768,
                                      num_hidden_layers=12,
@@ -68,7 +68,7 @@ class BERT_NER(nn.Module):
         tag = self.out_tag(output_tag)
         pos = self.out_pos(output_pos)
 
-        # loss for each task! TODO: freeze the other layers, or is it done with the parameters?
+        # loss for each task
         loss_tag = loss_function(tag, target_tag, mask, self.num_tag)
         loss_pos = loss_function(pos, target_pos, mask, self.num_pos)
 

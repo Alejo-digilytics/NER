@@ -1,7 +1,7 @@
 # Project exclude paths
 /venv/
 .idea/
-NER_data/ner_dataset.csv
-NER_data/ner.csv
-FinBERT_base/bert_base_uncased.bin
-FinBERT_base/finbert_vocab_uncased.bin
+Data/NER_data/ner_dataset.csv
+Data/NER_data/ner.csv
+models/bert_base_uncased/
+models/finbert_vocab_uncased/

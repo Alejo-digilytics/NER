@@ -1,20 +1,25 @@
-from sklearn import model_selection
+# DS libraries
+from sklearn.model_selection import train_test_split
+import numpy as np
+# NLP and DL libraries
 from torch.utils.data import DataLoader
 from transformers import AdamW, get_linear_schedule_with_warmup
 import transformers
-import Data.configurations.config as config
+from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, BertConfig
+# Internal calls
+import src.config as config
 from src import train_val_loss, dataset
 from src.tools import check_device, preprocess_data_BERT
 from src.model import BERT_NER
+# coding libraries
 import joblib
 import logging
-import numpy as np
-from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, BertConfig
+
 
 
 class NER:
     def __init__(self, encoding, base_model="bert_base_uncased"):
-        """ There are only two base_model options allowed: "bert_base_uncased" and "finbert_vocab_uncased" """
+        """ There are only two base_model options allowed: "bert_base_uncased" and "finbert-uncased" """
         self.config = config
         self.loss = [[], []]
         self.pos_std = None
@@ -25,27 +30,29 @@ class NER:
 
         # Fix the tokenizer
         if base_model == "bert_base_uncased":
-            self.tokenizer = transformers.BertTokenizer.from_pretrained(BERT_PATH,
-                                                                        do_lower_case=True)
-        elif base_model == "finbert_vocab_uncased":
+            self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
+        elif base_model == "finbert-uncased":
             self.tokenizer = BertTokenizer(vocab_file=FINBERT_VOCABULARY_PATH,
                                            do_lower_case=True,
                                            do_basic_tokenize=True)
 
     def train(self, saving=True):
-        logging.info("Loading data")
+        logging.info("preprocessing data ...")
 
         # We preprocess and normalize the data and output it as np.arrays/ pd.series
         sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE,
                                                                                self.encoding)
 
+        logging.info("data has been preprocessed")
+
         # Checkpoint for the standardized pos and tag
+        logging.info("Making checkpoint for the preprocessed data ...")
         if saving:
             data_check_pt = {
                 "pos_std": self.pos_std,
                 "tag_std": self.tag_std
             }
-            joblib.dump(data_check_pt, CHECKPOINTS_PATH)
+            joblib.dump(value=data_check_pt, filename=config.CHECKPOINTS_PATH)
         else:
             pass
 
@@ -54,8 +61,9 @@ class NER:
         num_pos = len(list(self.pos_std.classes_))
 
         # Split training set with skl
+        logging.info(" Splitting data and creating data sets ...")
         self.train_sentences, self.test_sentences, self.train_pos, self.test_pos, self.train_tag, self.test_tag \
-            = model_selection.train_test_split(sentences, pos, tag, random_state=42, test_size=0.2)
+            = train_test_split(sentences, pos, tag, random_state=42, test_size=0.2)
 
         # Format based on Entities_dataset: getitem outputs pandas dataframes
         self.train = dataset.Entities_dataset(texts=self.train_sentences,
@@ -80,6 +88,7 @@ class NER:
                                            num_workers=4)
 
         # Load tensor to device and hyperparameters
+        logging.info("Moving model to cuda ...")
         self.model_device(phase="train", num_tag=num_tag, num_pos=num_pos)
         self.hyperparameters()
 
@@ -87,17 +96,19 @@ class NER:
         best_loss = np.inf
 
         # EPOCHS
+        logging.info("Starting Fine-tuning ...")
         for epoch in range(self.config.EPOCHS):
             train_loss = train_val_loss.train(self.train_data_loader, self.model,
                                               self.optimizer, self.device, self.scheduler)
             test_loss = train_val_loss.validation(self.test_data_loader, self.model,
                                                   self.device)
-            print("Train Loss = {} test Loss = {}".format(train_loss, test_loss))
+            logging.info("Train Loss = {} test Loss = {}".format(train_loss, test_loss))
             self.loss[0].extend(train_loss)
             self.loss[1].extend(test_loss)
             if test_loss < best_loss:
                 torch.save(self.model.state_dict(), self.config.MODEL_PATH)
                 best_loss = test_loss
+        logging.info("Fine-tuning finished")
         return best_loss
 
     def predict(self, text):

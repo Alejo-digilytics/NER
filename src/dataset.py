@@ -1,4 +1,4 @@
-import Data.configurations.config as config
+import src.config as config
 import torch
 
 
