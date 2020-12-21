@@ -9,9 +9,19 @@ class BERT_NER(nn.Module):
     def __init__(self, num_tag, num_pos, base_model="bert_base_uncased"):
         super(BERT_NER, self).__init__()
 
+        self.base_model = base_model
+        if base_model == "bert_base_uncased":
+            self.base_model_path = BERT_UNCASED_PATH
+        elif base_model == "bert_base_cased":
+            self.base_model_path = BERT_CASED_PATH
+        elif base_model == "finbert_vocab_cased":
+            self.base_model_path = FINBERT_CASED_PATH
+        elif base_model == "finbert_vocab_uncased":
+            self.base_model_path = FINBERT_UNCASED_PATH
+
         if base_model == "bert_base_uncased":
             # self.model = BertModel.from_pretrained("bert-base-uncased")
-            self.model = transformers.BertModel.from_pretrained(config.BERT_PATH)
+            self.model = transformers.BertModel.from_pretrained(config.BERT_UNCASED_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30522,
                                      hidden_size=768,
                                      num_hidden_layers=12,
@@ -25,7 +35,7 @@ class BERT_NER(nn.Module):
                                      initializer_range=0.02
                                      )
         if base_model == "finbert-uncased":
-            self.model = BertModel.from_pretrained(config.FINBERT_PATH)
+            self.model = BertModel.from_pretrained(config.FINBERT_UNCASED_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30873,
                                      hidden_size=768,
                                      num_hidden_layers=12,

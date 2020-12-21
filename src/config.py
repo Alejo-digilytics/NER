@@ -10,13 +10,21 @@ EPOCHS = 10
 # PATHS
 BASE_PATH = os.getcwd()
 BASE_DATA_PATH = join(BASE_PATH, "Data")
-BASE_MODELS_PATH = join(BASE_PATH, "models")
+MODELS_PATHS = join(BASE_PATH, "models")
+
+# MODELS
+FINBERT_UNCASED_PATH = join(MODELS_PATHS, "finbert-uncased")
+FINBERT_CASED_PATH = join(MODELS_PATHS, "finbert-cased")
+BERT_CASED_PATH = join(MODELS_PATHS, "bert-base-cased")
+BERT_UNCASED_PATH = join(MODELS_PATHS, "bert-base-uncased")
+
+# Vocabularies
+FINBERT_UNCASED_VOCAB = join(FINBERT_UNCASED_PATH, "vocab.txt")
+FINBERT_CASED_VOCAB = join(FINBERT_CASED_PATH, "vocab.txt")
+BERT_CASED_VOCAB = join(BERT_CASED_PATH, "vocab.txt")
+BERT_UNCASED_VOCAB = join(BERT_UNCASED_PATH, "vocab.txt")
 
 # DATA PATHS
 TRAINING_FILE = join(BASE_DATA_PATH, "NER_data", "ner_dataset.csv")
 CHECKPOINTS_PATH = join(BASE_DATA_PATH, "Checkpoints", "std_data.bin")
 
-# MODELS
-BERT_PATH = join(BASE_MODELS_PATH, "bert-base-uncased")
-FINBERT_UNCASED_PATH = join(BASE_MODELS_PATH, "finbert-uncased")
-FINBERT_CASED_PATH = join(BASE_MODELS_PATH, "finbert-cased")

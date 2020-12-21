@@ -32,7 +32,7 @@ class NER:
         if base_model == "bert_base_uncased":
             self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
         elif base_model == "finbert-uncased":
-            self.tokenizer = BertTokenizer(vocab_file=FINBERT_VOCABULARY_PATH,
+            self.tokenizer = BertTokenizer(vocab_file=FINBERT_UNCASED_VOCAB,
                                            do_lower_case=True,
                                            do_basic_tokenize=True)
 
@@ -82,10 +82,12 @@ class NER:
         # "workers" means subprocess no gpus in the cuda
         self.train_data_loader = DataLoader(self.train,
                                             batch_size=self.config.TRAIN_BATCH_SIZE,
-                                            num_workers=4)
+                                            num_workers=4
+                                            )
         self.test_data_loader = DataLoader(self.test,
                                            batch_size=self.config.VALID_BATCH_SIZE,
-                                           num_workers=4)
+                                           num_workers=4
+                                           )
 
         # Load tensor to device and hyperparameters
         logging.info("Moving model to cuda ...")
@@ -167,5 +169,6 @@ class NER:
         self.optimizer = AdamW(optimizer_parameters, lr=3e-5)
 
         # Scheduler
-        self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps=0,
+        self.scheduler = get_linear_schedule_with_warmup(self.optimizer,
+                                                         num_warmup_steps=0,
                                                          num_training_steps=num_train_steps)
