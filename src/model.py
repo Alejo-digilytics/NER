@@ -11,13 +11,13 @@ class BERT_NER(nn.Module):
 
         self.base_model = base_model
         if base_model == "bert_base_uncased":
-            self.base_model_path = BERT_UNCASED_PATH
+            self.base_model_path = config.BERT_UNCASED_PATH
         elif base_model == "bert_base_cased":
-            self.base_model_path = BERT_CASED_PATH
+            self.base_model_path = config.BERT_CASED_PATH
         elif base_model == "finbert_vocab_cased":
-            self.base_model_path = FINBERT_CASED_PATH
+            self.base_model_path = config.FINBERT_CASED_PATH
         elif base_model == "finbert_vocab_uncased":
-            self.base_model_path = FINBERT_UNCASED_PATH
+            self.base_model_path = config.FINBERT_UNCASED_PATH
 
         if base_model == "bert_base_uncased":
             # self.model = BertModel.from_pretrained("bert-base-uncased")

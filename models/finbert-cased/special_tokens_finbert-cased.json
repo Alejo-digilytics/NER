@@ -1,0 +1,13 @@
+{"PAD_TOKEN": "[PAD]", 
+  "PAD_INDEX": 0, 
+  "UNK_TOKEN": "[UNK]", 
+  "UNK_INDEX": 2, 
+  "MASK_TOKEN": "[MASK]", 
+  "MASK_INDEX": 5, 
+  "SEP_TOKEN": "[SEP]", 
+  "SEP_INDEX": 4, 
+  "CLS_TOKEN": "[CLS]", 
+  "CLS_INDEX": 3, 
+  "EOS_TOKEN": "[EOS]", 
+  "EOS_INDEX": 1
+}

@@ -1,20 +1,25 @@
 # DS libraries
 from sklearn.model_selection import train_test_split
 import numpy as np
+
 # NLP and DL libraries
 from torch.utils.data import DataLoader
 from transformers import AdamW, get_linear_schedule_with_warmup
 import transformers
 from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, BertConfig
+
 # Internal calls
 import src.config as config
 from src import train_val_loss, dataset
 from src.tools import check_device, preprocess_data_BERT
 from src.model import BERT_NER
+
 # coding libraries
 import joblib
 import logging
 
+
+logging.basicConfig(filename='test.log', level=logging.DEBUG, format='%(asctime)s:%(levelname)s:%(message)s')
 
 
 class NER:

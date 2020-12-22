@@ -56,6 +56,7 @@ class Entities_dataset:
             target_tag = target_tag[:config.MAX_LEN - 2]
 
             # CSL = 101 in BERT!!! and SEP is 102 in BERT!!
+            # TODO: replace by special tokens dictionaries
             ids = [101] + ids + [102]
             target_pos = [0] + target_pos + [0]
             target_tag = [0] + target_tag + [0]
