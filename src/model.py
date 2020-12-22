@@ -8,7 +8,6 @@ from pytorch_pretrained_bert import BertModel, BertConfig
 class BERT_NER(nn.Module):
     def __init__(self, num_tag, num_pos, base_model="bert_base_uncased"):
         super(BERT_NER, self).__init__()
-
         self.base_model = base_model
         if base_model == "bert_base_uncased":
             self.base_model_path = config.BERT_UNCASED_PATH

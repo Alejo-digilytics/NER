@@ -11,7 +11,7 @@ from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, B
 # Internal calls
 import src.config as config
 from src import train_val_loss, dataset
-from src.tools import check_device, preprocess_data_BERT
+from src.tools import check_device, preprocess_data_BERT, special_tokens_dict
 from src.model import BERT_NER
 
 # coding libraries
@@ -23,6 +23,7 @@ logging.basicConfig(filename='test.log', level=logging.DEBUG, format='%(asctime)
 
 
 class NER:
+
     def __init__(self, encoding, base_model="bert_base_uncased"):
         """ There are only two base_model options allowed: "bert_base_uncased" and "finbert-uncased" """
         self.config = config
@@ -33,13 +34,15 @@ class NER:
         self.encoding = encoding
         self.base_model = base_model
 
-        # Fix the tokenizer
+        # Fix the tokenizer and special tokens
         if base_model == "bert_base_uncased":
             self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
+            self.special_tokens_dict = special_tokens_dict(config.BERT_UNCASED_VOCAB)
         elif base_model == "finbert-uncased":
             self.tokenizer = BertTokenizer(vocab_file=FINBERT_UNCASED_VOCAB,
                                            do_lower_case=True,
                                            do_basic_tokenize=True)
+            self.special_tokens_dict = special_tokens_dict(config.FINBERT_UNCASED_VOCAB)
 
     def train(self, saving=True):
         logging.info("preprocessing data ...")
@@ -74,14 +77,16 @@ class NER:
         self.train = dataset.Entities_dataset(texts=self.train_sentences,
                                               pos=self.train_pos,
                                               tags=self.train_tag,
-                                              tokenizer=self.tokenizer
+                                              tokenizer=self.tokenizer,
+                                              special_tokens=self.special_tokens_dict
                                               )
 
         self.test = dataset.Entities_dataset(texts=self.test_sentences,
                                              pos=self.test_pos,
                                              tags=self.test_tag,
-                                             tokenizer=self.tokenizer
-                                             )
+                                              tokenizer=self.tokenizer,
+                                              special_tokens=self.special_tokens_dict
+                                              )
 
         # Loaders from torch: it formats the data for pytorch and fixes the batch and the num of kernels
         # "workers" means subprocess no gpus in the cuda
@@ -130,7 +135,12 @@ class NER:
         # preprocessing
         sentence = text.split()
         text = self.config.TOKENIZER.encode(text)
-        tets_text = dataset.Entities_dataset(texts=[sentence], pos=[[0] * len(sentence)], tags=[[0] * len(sentence)])
+        tets_text = dataset.Entities_dataset(texts=[sentence],
+                                             pos=[[0] * len(sentence)],
+                                             tags=[[0] * len(sentence)],
+                                             tokenizer=self.tokenizer,
+                                             special_tokens=self.special_tokens_dict
+                                             )
 
         self.model_device(phase="predict", num_tag=num_tag, num_pos=num_pos)
 

@@ -1,6 +1,9 @@
 import torch
 import pandas as pd
 from sklearn import preprocessing as prep
+import os
+import json
+
 
 def check_device():
     """
@@ -54,3 +57,20 @@ def preprocess_data_BERT(data_path, my_encoding="utf8"):
     tag = df.groupby(cols[0])["Tag"].apply(list).values
 
     return sentences, pos, tag, pos_std, tag_std
+
+
+def special_tokens_dict(vocab_path):
+    special_tokens_dict = {}
+    special_tokens_list = ["[PAD]", "[UNK]", "[MASK]", "[SEP]", "[CLS]"]
+    position = 0
+    with open(vocab_path, "rb") as vocab:
+        for line in vocab:
+            if any(special_tokens_list) in line:
+                special_tokens_dict[line.stri()] = position
+            position += 1
+    vocab.close()
+    special_tokens_path = os.path.join(os.path.dirname(base_model_path), "special_tokens.json")
+    with open(special_tokens_path, "w+") as outfile:
+        json.dump(special_tokens_dict, outfile)
+    outfile.close()
+    return special_tokens_dict

@@ -18,11 +18,12 @@ class Entities_dataset:
         - pos (np.array): part of speech array
         - tags (np.array): NER's tags array
     """
-    def __init__(self, texts, pos, tags, tokenizer):
+    def __init__(self, texts, pos, tags, tokenizer, special_tokens):
         self.texts = texts
         self.pos = pos
         self.tags = tags
         self.tokenizer = tokenizer
+        self.special_tokens = special_tokens
 
     def __len__(self):
         return len(self.texts)
@@ -57,7 +58,7 @@ class Entities_dataset:
 
             # CSL = 101 in BERT!!! and SEP is 102 in BERT!!
             # TODO: replace by special tokens dictionaries
-            ids = [101] + ids + [102]
+            ids = self.special_tokens["[CSL]"] + ids + self.special_tokens["[SEP]"]
             target_pos = [0] + target_pos + [0]
             target_tag = [0] + target_tag + [0]
 
@@ -67,7 +68,7 @@ class Entities_dataset:
 
             # PADDING FIXED, NOT DYNAMIC
             padding_len = config.MAX_LEN - len(ids)
-            ids = ids + ([0] * padding_len)
+            ids = ids + ([self.special_tokens["[PAD]"]] * padding_len)
             tokens_type_ids = tokens_type_ids + ([0] * padding_len)
             mask = mask + ([0] * padding_len)
             target_pos = target_pos + ([0] * padding_len)
