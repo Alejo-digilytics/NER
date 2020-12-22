@@ -24,7 +24,7 @@ logging.basicConfig(filename='test.log', level=logging.DEBUG, format='%(asctime)
 
 class NER:
 
-    def __init__(self, encoding, base_model="bert_base_uncased"):
+    def __init__(self, encoding, base_model="bert-base-uncased"):
         """ There are only two base_model options allowed: "bert_base_uncased" and "finbert-uncased" """
         self.config = config
         self.loss = [[], []]
@@ -35,7 +35,7 @@ class NER:
         self.base_model = base_model
 
         # Fix the tokenizer and special tokens
-        if base_model == "bert_base_uncased":
+        if base_model == "bert-base-uncased":
             self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
             self.special_tokens_dict = special_tokens_dict(config.BERT_UNCASED_VOCAB)
         elif base_model == "finbert-uncased":
