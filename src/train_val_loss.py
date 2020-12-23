@@ -71,8 +71,8 @@ def validation(data_loader, model, device):
     for data in tqdm(data_loader, total=len(data_loader)):
         for key, val in data.items():
             data[key] = val.to(device)
-            # we might take care that we are using the same names that in data_loader:
-            # "ids" "mask" "tokens_type_ids" "target_pos" "target_tag"
-            _, _, loss = model(**data)
-            final_loss += loss.item()
+        # we might take care that we are using the same names that in data_loader:
+        # "ids" "mask" "tokens_type_ids" "target_pos" "target_tag"
+        _, _, loss = model(**data)
+        final_loss += loss.item()
     return final_loss / len(data_loader)

@@ -4,6 +4,7 @@ import numpy as np
 
 # NLP and DL libraries
 from torch.utils.data import DataLoader
+import torch
 from transformers import AdamW, get_linear_schedule_with_warmup
 import transformers
 from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, BertConfig
@@ -27,7 +28,8 @@ class NER:
     def __init__(self, encoding, base_model="bert-base-uncased"):
         """ There are only two base_model options allowed: "bert_base_uncased" and "finbert-uncased" """
         self.config = config
-        self.loss = [[], []]
+        self.list_train_losses = []
+        self.list_test_losses = []
         self.pos_std = None
         self.tag_std = None
         self.device = None
@@ -60,7 +62,7 @@ class NER:
                 "pos_std": self.pos_std,
                 "tag_std": self.tag_std
             }
-            joblib.dump(value=data_check_pt, filename=config.CHECKPOINTS_PATH)
+            joblib.dump(value=data_check_pt, filename=config.CHECKPOINTS_META_PATH)
         else:
             pass
 
@@ -110,17 +112,23 @@ class NER:
         # EPOCHS
         logging.info("Starting Fine-tuning ...")
         for epoch in range(self.config.EPOCHS):
-            train_loss = train_val_loss.train(self.train_data_loader, self.model,
-                                              self.optimizer, self.device, self.scheduler)
-            test_loss = train_val_loss.validation(self.test_data_loader, self.model,
+            train_loss = train_val_loss.train(self.train_data_loader,
+                                              self.model,
+                                              self.optimizer,
+                                              self.device,
+                                              self.scheduler)
+            test_loss = train_val_loss.validation(self.test_data_loader,
+                                                  self.model,
                                                   self.device)
             logging.info("Train Loss = {} test Loss = {}".format(train_loss, test_loss))
-            self.loss[0].extend(train_loss)
-            self.loss[1].extend(test_loss)
+            self.list_train_losses.append(float(train_loss))
+            self.list_test_losses.append(float(test_loss))
             if test_loss < best_loss:
-                torch.save(self.model.state_dict(), self.config.MODEL_PATH)
+                torch.save(self.model.state_dict(), self.config.CHECKPOINTS_MODEL_PATH)
                 best_loss = test_loss
         logging.info("Fine-tuning finished")
+        logging.info("With training losses: {}".format(self.list_train_losses))
+        logging.info("With test losses: {}".format(self.list_train_losses))
         return best_loss
 
     def predict(self, text):
