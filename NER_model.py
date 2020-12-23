@@ -132,6 +132,7 @@ class NER:
         return best_loss
 
     def predict(self, text):
+
         # check pos and tag
         if self.pos_std is None:
             std_data = joblib.load("std_data.bin")
