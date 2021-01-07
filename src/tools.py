@@ -3,6 +3,8 @@ import pandas as pd
 from sklearn import preprocessing as prep
 import os
 import json
+from matplotlib import pyplot as plt
+import numpy as np
 
 
 def check_device():
@@ -83,3 +85,15 @@ def special_tokens_dict(vocab_path):
         json.dump(special_tokens_dict, outfile)
     outfile.close()
     return special_tokens_dict
+
+def ploter(num_epochs, **losses):
+    epochs = range(num_epochs)
+    for key, value in losses.items():
+        value = np.asarray(value)
+        new_color = "#"+''.join([np.random.choice('0123456789ABCDEF') for i in range(6)])
+        plt.plot(epochs, value, marker='o', color=new_color, label=key+" acc")
+        plt.ylabel(key + "'s Loss")
+        plt.xlabel("Number of epochs")
+    plt.legend()
+    plt.title(" vs ".join([key for key in losses.keys()]))
+    plt.show()

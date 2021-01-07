@@ -12,15 +12,24 @@ from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, B
 # Internal calls
 import src.config as config
 from src import train_val_loss, dataset
-from src.tools import check_device, preprocess_data_BERT, special_tokens_dict
+from src.tools import check_device, preprocess_data_BERT, special_tokens_dict, ploter
 from src.model import BERT_NER
 
 # coding libraries
+from os.path import join
 import joblib
 import logging
+import sys
 
 
-logging.basicConfig(filename='test.log', level=logging.DEBUG, format='%(asctime)s:%(levelname)s:%(message)s')
+formatter = logging.Formatter('%(asctime)s %(levelname)s_%(name)s: %(message)s')
+logging.basicConfig(filename='fine_tune.log', level=logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+handler.setFormatter(formatter)
+global logger
+logger = logging.getLogger("NER")
+logger.addHandler(handler)
 
 
 class NER:
@@ -41,22 +50,22 @@ class NER:
             self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
             self.special_tokens_dict = special_tokens_dict(config.BERT_UNCASED_VOCAB)
         elif base_model == "finbert-uncased":
-            self.tokenizer = BertTokenizer(vocab_file=FINBERT_UNCASED_VOCAB,
+            self.tokenizer = BertTokenizer(vocab_file=config.FINBERT_UNCASED_VOCAB,
                                            do_lower_case=True,
                                            do_basic_tokenize=True)
             self.special_tokens_dict = special_tokens_dict(config.FINBERT_UNCASED_VOCAB)
 
-    def train(self, saving=True):
-        logging.info("preprocessing data ...")
+    def training(self, saving=True):
+        logger.info("preprocessing data ...")
 
         # We preprocess and normalize the data and output it as np.arrays/ pd.series
         sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE,
                                                                                self.encoding)
 
-        logging.info("data has been preprocessed")
+        logger.info("data has been preprocessed")
 
         # Checkpoint for the standardized pos and tag
-        logging.info("Making checkpoint for the preprocessed data ...")
+        logger.info("Making checkpoint for the preprocessed data ...")
         if saving:
             data_check_pt = {
                 "pos_std": self.pos_std,
@@ -71,7 +80,7 @@ class NER:
         num_pos = len(list(self.pos_std.classes_))
 
         # Split training set with skl
-        logging.info(" Splitting data and creating data sets ...")
+        logger.info(" Splitting data and creating data sets ...")
         self.train_sentences, self.test_sentences, self.train_pos, self.test_pos, self.train_tag, self.test_tag \
             = train_test_split(sentences, pos, tag, random_state=42, test_size=0.2)
 
@@ -86,9 +95,9 @@ class NER:
         self.test = dataset.Entities_dataset(texts=self.test_sentences,
                                              pos=self.test_pos,
                                              tags=self.test_tag,
-                                              tokenizer=self.tokenizer,
-                                              special_tokens=self.special_tokens_dict
-                                              )
+                                             tokenizer=self.tokenizer,
+                                             special_tokens=self.special_tokens_dict
+                                             )
 
         # Loaders from torch: it formats the data for pytorch and fixes the batch and the num of kernels
         # "workers" means subprocess no gpus in the cuda
@@ -102,7 +111,7 @@ class NER:
                                            )
 
         # Load tensor to device and hyperparameters
-        logging.info("Moving model to cuda ...")
+        logger.info("Moving model to cuda ...")
         self.model_device(phase="train", num_tag=num_tag, num_pos=num_pos)
         self.hyperparameters()
 
@@ -110,8 +119,9 @@ class NER:
         best_loss = np.inf
 
         # EPOCHS
-        logging.info("Starting Fine-tuning ...")
+        logger.info("Starting Fine-tuning ...")
         for epoch in range(self.config.EPOCHS):
+            logger.info("Start epoch {}".format(epoch+1))
             train_loss = train_val_loss.train(self.train_data_loader,
                                               self.model,
                                               self.optimizer,
@@ -120,18 +130,40 @@ class NER:
             test_loss = train_val_loss.validation(self.test_data_loader,
                                                   self.model,
                                                   self.device)
-            logging.info("Train Loss = {} test Loss = {}".format(train_loss, test_loss))
-            self.list_train_losses.extend(float(train_loss))
-            self.list_test_losses.extend(float(test_loss))
+            logger.info("Train Loss = {}".format(train_loss))
+            logger.info("Test Loss = {}".format(test_loss))
+            self.list_train_losses.append(float(train_loss))
+            self.list_test_losses.append(float(test_loss))
+            logger.info("End epoch {}".format(epoch))
+            logger.info("Testing epoch {}".format(epoch))
             if test_loss < best_loss:
                 torch.save(self.model.state_dict(), self.config.CHECKPOINTS_MODEL_PATH)
                 best_loss = test_loss
-        logging.info("Fine-tuning finished")
-        logging.info("With training losses: {}".format(self.list_train_losses))
-        logging.info("With test losses: {}".format(self.list_train_losses))
+            logger.info("End epoch {} with loss {} asnd best loss {}".format(epoch, test_loss, best_loss))
+        logger.info("Fine-tuning finished")
+        logger.info("With training losses: {}".format(self.list_train_losses))
+        logger.info("With test losses: {}".format(self.list_train_losses))
+
+        # plotting
+        losses = {"train": self.list_train_losses, "test": self.list_test_losses}
+        ploter(self.config.EPOCHS, **losses)
+
+        # Saving results
+        data1 = np.array(self.list_train_losses)
+        np.savez(join(config.BASE_DATA_PATH, "list_train_losses"), data1)
+        data2 = np.array(self.list_test_losses)
+        np.savez(join(config.BASE_DATA_PATH, "list_test_losses"), data2)
+        data4 = np.array(num_pos)
+        np.savez(join(config.BASE_DATA_PATH, "num_pos"), data4)
+        data3 = np.array(num_tag)
+        np.savez(join(config.BASE_DATA_PATH, "num_tag"), data3)
         return best_loss
 
     def predict(self, text):
+
+        # Loading the results
+        num_tag = np.load("num_tag.npz")
+        num_pos = np.load("num_pos.npz")
 
         # check pos and tag
         if self.pos_std is None:
@@ -156,11 +188,11 @@ class NER:
         with torch.no_grad():
             data = tets_text[0]
             for k, v in data.items():
-                data[k] = v.to(device).unsqueeze(0)
-            tag, pos, _ = model(**data)
+                data[k] = v.to(self.device).unsqueeze(0)
+            tag, pos, _ = self.model(**data)
 
-            print(tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
-            print(pos_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
+            print(self.tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
+            print(self.pos_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
 
     def model_device(self, phase, num_tag, num_pos):
         """ Use GPU, load model and move it there -- device or cpu if cuda is not available """
