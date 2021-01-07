@@ -121,8 +121,8 @@ class NER:
                                                   self.model,
                                                   self.device)
             logging.info("Train Loss = {} test Loss = {}".format(train_loss, test_loss))
-            self.list_train_losses.append(float(train_loss))
-            self.list_test_losses.append(float(test_loss))
+            self.list_train_losses.extend(float(train_loss))
+            self.list_test_losses.extend(float(test_loss))
             if test_loss < best_loss:
                 torch.save(self.model.state_dict(), self.config.CHECKPOINTS_MODEL_PATH)
                 best_loss = test_loss
