@@ -194,7 +194,7 @@ class NER:
 
         # preprocessing
         sentence = text.split()
-        text = self.config.TOKENIZER.encode(text)
+        text = self.tokenizer.encode(text)
         tets_text = dataset.Entities_dataset(texts=[sentence],
                                              pos=[[0] * len(sentence)],
                                              tags=[[0] * len(sentence)],
