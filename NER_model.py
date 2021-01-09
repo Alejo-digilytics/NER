@@ -33,8 +33,21 @@ logger.addHandler(handler)
 
 
 class NER:
-    def __init__(self, encoding, base_model="bert-base-uncased"):
-        """ There are only two base_model options allowed: "bert_base_uncased" and "finbert-uncased" """
+    def __init__(self, encoding, base_model="bert-base-uncased",
+                 num_ner=0, tag_dropout=0.3, pos_dropout=0.3, ner_dropout=None,
+                 architecture="simple", ner=False, middle_layer=None
+                 ):
+        """ There are only two base_model options allowed: "bert-base-uncased" and "finbert-uncased" """
+        # Fine Tuning parameters
+        self.ner = ner
+        self.num_ner = num_ner
+        self.ner_dropout = ner_dropout
+        self.architecture = architecture
+        self.middle_layer = middle_layer
+        self.tag_dropout = tag_dropout
+        self.pos_dropout = pos_dropout
+
+        # configuration
         self.config = config
         self.list_train_losses = []
         self.list_test_losses = []
@@ -133,8 +146,8 @@ class NER:
             logger.info("Test Loss = {}".format(test_loss))
             self.list_train_losses.append(float(train_loss))
             self.list_test_losses.append(float(test_loss))
-            logger.info("End epoch {}".format(epoch))
-            logger.info("Testing epoch {}".format(epoch))
+            logger.info("End epoch {}".format(epoch+1))
+            logger.info("Testing epoch {}".format(epoch+1))
             if test_loss < best_loss:
                 torch.save(self.model.state_dict(), self.config.CHECKPOINTS_MODEL_PATH)
                 best_loss = test_loss
@@ -197,7 +210,16 @@ class NER:
         """ Use GPU, load model and move it there -- device or cpu if cuda is not available """
 
         self.device = check_device()
-        self.model = BERT_NER(num_tag=num_tag, num_pos=num_pos)
+        self.model = BERT_NER(num_tag=num_tag,
+                              num_pos=num_pos,
+                              num_ner=self.num_ner,
+                              base_model=self.base_model,
+                              tag_dropout=self.tag_dropout,
+                              pos_dropout=self.pos_dropout,
+                              ner_dropout=self.ner_dropout,
+                              architecture=self.architecture,
+                              ner=self.ner,
+                              middle_layer=self.middle_layer)
         if phase == "train":
             self.model.to(self.device)
         elif phase == "predict":

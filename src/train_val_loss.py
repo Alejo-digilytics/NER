@@ -67,6 +67,7 @@ def validation(data_loader, model, device):
     """
     model.eval()
 
+
     # Fix a top for the loss
     final_loss = 0
     for data in tqdm(data_loader, total=len(data_loader)):

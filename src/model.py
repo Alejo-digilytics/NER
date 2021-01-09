@@ -6,10 +6,17 @@ from pytorch_pretrained_bert import BertModel, BertConfig
 
 
 class BERT_NER(nn.Module):
-    def __init__(self, num_tag, num_pos, base_model="bert_base_uncased"):
+    def __init__(self, num_tag,
+                 num_pos,
+                 num_ner=0,
+                 base_model="bert-base-uncased",
+                 tag_dropout=0.3, pos_dropout=0.3, ner_dropout=None,
+                 architecture="simple", ner=False, middle_layer=100):
         super(BERT_NER, self).__init__()
         self.base_model = base_model
-        if base_model == "bert_base_uncased":
+        self.architecture = architecture
+        self.ner = ner
+        if base_model == "bert-base-uncased":
             self.base_model_path = config.BERT_UNCASED_PATH
         elif base_model == "bert_base_cased":
             self.base_model_path = config.BERT_CASED_PATH
@@ -18,7 +25,7 @@ class BERT_NER(nn.Module):
         elif base_model == "finbert_vocab_uncased":
             self.base_model_path = config.FINBERT_UNCASED_PATH
 
-        if base_model == "bert_base_uncased":
+        if base_model == "bert-base-uncased":
             # self.model = BertModel.from_pretrained("bert-base-uncased")
             self.model = transformers.BertModel.from_pretrained(config.BERT_UNCASED_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30522,
@@ -51,16 +58,34 @@ class BERT_NER(nn.Module):
         # NER parameters
         self.num_tag = num_tag
         self.num_pos = num_pos
+        if self.ner:
+            self.num_ner = num_ner
 
         # Extra layers for fine-tuning FeedFordward layer with 30% of dropout in both
-        self.bert_drop_1 = nn.Dropout(0.3)
-        self.bert_drop_2 = nn.Dropout(0.3)
+        self.bert_drop_1 = nn.Dropout(tag_dropout)
+        self.bert_drop_2 = nn.Dropout(pos_dropout)
+        if self.ner:
+            self.bert_drop_3 = nn.Dropout(ner_dropout)
 
-        # 768 (BERT) composed with a linear function
-        self.out_tag = nn.Linear(768, self.num_tag)
-        self.out_pos = nn.Linear(768, self.num_pos)
+        # Architecture
+        if self.architecture == "simple":
+            # 768 (BERT) composed with a linear function
+            self.out_tag = nn.Linear(768, self.num_tag)
+            self.out_pos = nn.Linear(768, self.num_pos)
+            if ner:
+                self.out_pos = nn.Linear(768, self.num_ner)
 
-    def forward(self, ids, mask, tokens_type_ids, target_pos, target_tag):
+        if self.architecture == "complex":
+            # 768 (BERT) composed with a linear function
+            self.tag_mid = nn.Linear(768, middle_layer)
+            self.out_tag = nn.Linear(middle_layer, self.num_tag)
+            self.pos_mid = nn.Linear(768,  middle_layer)
+            self.out_pos = nn.Linear(middle_layer, self.num_pos)
+            if self.ner:
+                self.ner_mid = nn.Linear(768,  middle_layer)
+                self.out_ner = nn.Linear(middle_layer, self.num_ner)
+
+    def forward(self, ids, mask, tokens_type_ids, target_pos, target_tag, target_ner=None):
         """
         This method if the extra fine tuning NN for both, tags and pos
         """
@@ -69,18 +94,41 @@ class BERT_NER(nn.Module):
         # BERT output: o1
         o1, _ = self.model(ids, attention_mask=mask, token_type_ids=tokens_type_ids)
 
-        # Add dropouts
-        output_tag = self.bert_drop_1(o1)
-        output_pos = self.bert_drop_2(o1)
+        if self.architecture == "simple":
+            # Add dropouts
+            output_tag = self.bert_drop_1(o1)
+            output_pos = self.bert_drop_2(o1)
+            if self.ner:
+                output_ner = self.bert_drop_3(o1)
+
+        if self.architecture == "complex":
+            # Add dropouts
+            output_tag1 = self.bert_drop_1(o1)
+            output_pos1 = self.bert_drop_2(o1)
+            if self.ner:
+                output_ner1 = self.bert_drop_3(o1)
+            # Add middle layer
+            output_tag = self.tag_mid(output_tag1)
+            output_pos = self.pos_mid(output_pos1)
+            if self.ner:
+                output_ner = self.ner_mid(output_ner1)
 
         # We add the linear outputs
         tag = self.out_tag(output_tag)
         pos = self.out_pos(output_pos)
+        if self.ner:
+            ner = self.out_pos(output_ner)
 
         # loss for each task
         loss_tag = loss_function(tag, target_tag, mask, self.num_tag)
         loss_pos = loss_function(pos, target_pos, mask, self.num_pos)
+        if self.ner:
+            loss_ner = loss_function(ner, target_ner, mask, self.num_ner)
 
         # Compute the accumulative loss
-        loss = (loss_tag + loss_pos) / 2
-        return tag, pos, loss
+        if not self.ner:
+            loss = (loss_tag + loss_pos) / 2
+            return tag, pos, loss
+        if self.ner:
+            loss = (loss_tag + loss_pos + loss_ner) / 3
+            return tag, pos, ner, loss
