@@ -33,7 +33,6 @@ logger.addHandler(handler)
 
 
 class NER:
-
     def __init__(self, encoding, base_model="bert-base-uncased"):
         """ There are only two base_model options allowed: "bert_base_uncased" and "finbert-uncased" """
         self.config = config
