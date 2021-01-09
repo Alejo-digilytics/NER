@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 import torch
 from transformers import AdamW, get_linear_schedule_with_warmup
 import transformers
-from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, BertConfig
+from pytorch_pretrained_bert import BertTokenizer
 
 # Internal calls
 import src.config as config
@@ -20,6 +20,7 @@ from os.path import join
 import joblib
 import logging
 import sys
+from tqdm import tqdm
 
 
 formatter = logging.Formatter('%(asctime)s %(levelname)s_%(name)s: %(message)s')
@@ -74,7 +75,7 @@ class NER:
         sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE,
                                                                                self.encoding)
 
-        logger.info("data has been preprocessed")
+        logger.info("Data has been preprocessed")
 
         # Checkpoint for the standardized pos and tag
         logger.info("Making checkpoint for the preprocessed data ...")
@@ -181,12 +182,14 @@ class NER:
     def predict(self, text):
 
         # Loading the results
-        num_tag = np.load("num_tag.npz")
-        num_pos = np.load("num_pos.npz")
+        num_tag = np.load(join(config.BASE_DATA_PATH, "num_tag.npz"))
+        num_tag = num_tag.f.arr_0
+        num_pos = np.load(join(config.BASE_DATA_PATH, "num_pos.npz"))
+        num_pos = num_pos.f.arr_0
 
         # check pos and tag
         if self.pos_std is None:
-            std_data = joblib.load("std_data.bin")
+            std_data = joblib.load(config.CHECKPOINTS_META_PATH)
             self.pos_std = std_data["pos_std"]
             self.tag_std = std_data["tag_std"]
         else:
@@ -215,7 +218,6 @@ class NER:
 
     def model_device(self, phase, num_tag, num_pos):
         """ Use GPU, load model and move it there -- device or cpu if cuda is not available """
-
         self.device = check_device()
         self.model = BERT_NER(num_tag=num_tag,
                               num_pos=num_pos,
@@ -230,10 +232,47 @@ class NER:
         if phase == "train":
             self.model.to(self.device)
         elif phase == "predict":
-            self.model.load_state_dict(torch.load(self.config.MODEL_PATH))
+            self.model.load_state_dict(torch.load(self.config.CHECKPOINTS_MODEL_PATH))
             self.model.to(self.device)
         else:
             pass
+
+    def test_acc(self, file_name, models_version):
+        # Loading the results
+        num_tag = np.load(join(config.BASE_DATA_PATH, "num_tag.npz"))
+        num_tag = num_tag.f.arr_0
+        num_pos = np.load(join(config.BASE_DATA_PATH, "num_pos.npz"))
+        num_pos = num_pos.f.arr_0
+        # check pos and tag
+        if self.pos_std is None:
+            std_data = joblib.load(config.CHECKPOINTS_META_PATH)
+            self.pos_std = std_data["pos_std"]
+            self.tag_std = std_data["tag_std"]
+        else:
+            pass
+        # preprocessing
+        acc_example, real_pos, real_tag, _, _ = preprocess_data_BERT(join(self.config.ACC_FILE, file_name),
+                                                                     self.encoding)
+        processed_acc_example = dataset.Entities_dataset(texts=acc_example,
+                                                         pos=real_pos,
+                                                         tags=real_tag,
+                                                         tokenizer=self.tokenizer,
+                                                         special_tokens=self.special_tokens_dict
+                                                         )
+
+        acc_dataloader = DataLoader(processed_acc_example,
+                                    batch_size=self.config.VALID_BATCH_SIZE,
+                                    num_workers=4
+                                    )
+
+        self.model_device(phase="predict", num_tag=num_tag, num_pos=num_pos)
+
+        with torch.no_grad():
+            for data in tqdm(acc_dataloader, total=len(acc_dataloader)):
+                for key, value in data.items():
+                    data[key] = value.to(self.device)
+                tag, pos, _ = self.model(**data)
+
 
     def hyperparameters(self):
         """ This method fix the parameters and makes a filter over to exclude LayerNorm and biases """
