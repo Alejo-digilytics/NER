@@ -158,13 +158,20 @@ class NER:
 
         # plotting
         losses = {"train": self.list_train_losses, "test": self.list_test_losses}
-        ploter(self.config.EPOCHS, **losses)
+        name = "model=" + self.base_model + "_epochs=" + str(config.EPOCHS) + "_test_batch="
+        name += str(config.VALID_BATCH_SIZE) + "_train_batch=" + str(config.TRAIN_BATCH_SIZE) + "_max_len="
+        name += str(config.MAX_LEN) + "_dropouts=" + str(self.tag_dropout) + "_" + str(self.pos_dropout)
+        name += "_" + str(self.pos_dropout) + "_" + str(self.ner_dropout)+ "_architecture=" + str(self.architecture)
+        ploter(output_path=config.BASE_DATA_PATH,
+               name=name,
+               num_epochs=self.config.EPOCHS,
+               **losses)
 
         # Saving results
         data1 = np.array(self.list_train_losses)
-        np.savez(join(config.BASE_DATA_PATH, "list_train_losses"), data1)
+        np.savez(join(config.BASE_DATA_PATH, "train_losses_" + name), data1)
         data2 = np.array(self.list_test_losses)
-        np.savez(join(config.BASE_DATA_PATH, "list_test_losses"), data2)
+        np.savez(join(config.BASE_DATA_PATH, "test_losses_" + name), data2)
         data4 = np.array(num_pos)
         np.savez(join(config.BASE_DATA_PATH, "num_pos"), data4)
         data3 = np.array(num_tag)

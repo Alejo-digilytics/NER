@@ -87,14 +87,15 @@ def special_tokens_dict(vocab_path):
     outfile.close()
     return special_tokens_dict
 
-def ploter(num_epochs, **losses):
+def ploter(output_path, name, num_epochs, **losses):
     epochs = range(num_epochs)
     for key, value in losses.items():
         value = np.asarray(value)
         new_color = "#"+''.join([random.choice('0123456789ABCDEF') for i in range(6)])
         plt.plot(epochs, value, marker='o', color=new_color, label=key+" acc")
-        plt.ylabel(key + "'s Loss")
-        plt.xlabel("Number of epochs")
+    plt.ylabel(" ".join(list(losses.keys())) + " Losses")
+    plt.xlabel("Number of epochs")
     plt.legend()
     plt.title(" vs ".join([key for key in losses.keys()]))
+    plt.savefig(os.path.join(output_path, name + '.png'))
     plt.show()
