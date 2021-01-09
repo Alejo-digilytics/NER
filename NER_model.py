@@ -141,7 +141,7 @@ class NER:
             logger.info("End epoch {} with loss {} asnd best loss {}".format(epoch, test_loss, best_loss))
         logger.info("Fine-tuning finished")
         logger.info("With training losses: {}".format(self.list_train_losses))
-        logger.info("With test losses: {}".format(self.list_train_losses))
+        logger.info("With test losses: {}".format(self.list_test_losses))
 
         # plotting
         losses = {"train": self.list_train_losses, "test": self.list_test_losses}
