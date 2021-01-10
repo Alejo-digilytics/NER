@@ -22,7 +22,6 @@ import logging
 import sys
 from tqdm import tqdm
 
-
 formatter = logging.Formatter('%(asctime)s %(levelname)s_%(name)s: %(message)s')
 logging.basicConfig(filename='fine_tune.log', level=logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
@@ -58,7 +57,7 @@ class NER:
         self.tag_std = None
         self.device = None
         self.encoding = encoding
-        self.base_model = base_model
+        self.base_model = base_model.replace("_", "-")
 
         # Fix the tokenizer and special tokens
         if base_model == "bert-base-uncased":
@@ -74,6 +73,7 @@ class NER:
         logger.info("preprocessing data ...")
 
         # We preprocess and normalize the data and output it as np.arrays/ pd.series
+
         sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE,
                                                                                self.encoding)
 
@@ -104,14 +104,16 @@ class NER:
                                               pos=self.train_pos,
                                               tags=self.train_tag,
                                               tokenizer=self.tokenizer,
-                                              special_tokens=self.special_tokens_dict
+                                              special_tokens=self.special_tokens_dict,
+                                              model_name=self.base_model
                                               )
 
         self.test = dataset.Entities_dataset(texts=self.test_sentences,
                                              pos=self.test_pos,
                                              tags=self.test_tag,
                                              tokenizer=self.tokenizer,
-                                             special_tokens=self.special_tokens_dict
+                                             special_tokens=self.special_tokens_dict,
+                                             model_name=self.base_model
                                              )
 
         # Loaders from torch: it formats the data for pytorch and fixes the batch and the num of kernels
@@ -140,15 +142,15 @@ class NER:
         for epoch in range(self.config.EPOCHS):
 
             # Training
-            logger.info("Start epoch {}".format(epoch+1))
+            logger.info("Start epoch {}".format(epoch + 1))
             train_loss = train_val_loss.train(self.train_data_loader,
                                               self.model,
                                               self.optimizer,
                                               self.device,
                                               self.scheduler)
-            test_loss,  tag_acc, pos_acc = train_val_loss.validation(self.test_data_loader,
-                                                                     self.model,
-                                                                     self.device)
+            test_loss, tag_acc, pos_acc = train_val_loss.validation(self.test_data_loader,
+                                                                    self.model,
+                                                                    self.device)
 
             # Accuracies and Losses
             logger.info("Train Loss = {}".format(train_loss))
@@ -159,8 +161,8 @@ class NER:
             self.list_test_losses.append(float(test_loss))
             self.list_tag_acc.append(float(tag_acc))
             self.list_pos_acc.append(float(pos_acc))
-            logger.info("End epoch {}".format(epoch+1))
-            logger.info("Testing epoch {}".format(epoch+1))
+            logger.info("End epoch {}".format(epoch + 1))
+            logger.info("Testing epoch {}".format(epoch + 1))
             if test_loss < best_loss:
                 torch.save(self.model.state_dict(), self.config.CHECKPOINTS_MODEL_PATH)
                 best_loss = test_loss
@@ -168,7 +170,7 @@ class NER:
                 best_pos_acc = pos_acc
             if tag_acc > best_tag_acc:
                 best_tag_acc = tag_acc
-            logger.info("End epoch {} with loss {} asnd best loss {}".format(epoch+1, test_loss, best_loss))
+            logger.info("End epoch {} with loss {} asnd best loss {}".format(epoch + 1, test_loss, best_loss))
 
         logger.info("Fine-tuning finished")
         logger.info("With training losses: {}".format(self.list_train_losses))
@@ -179,7 +181,7 @@ class NER:
         name = "model=" + self.base_model + "_epochs=" + str(config.EPOCHS) + "_test_batch="
         name += str(config.VALID_BATCH_SIZE) + "_train_batch=" + str(config.TRAIN_BATCH_SIZE) + "_max_len="
         name += str(config.MAX_LEN) + "_dropouts=" + str(self.tag_dropout) + "_" + str(self.pos_dropout)
-        name += "_" + str(self.pos_dropout) + "_" + str(self.ner_dropout)+ "_architecture=" + str(self.architecture)
+        name += "_" + str(self.pos_dropout) + "_" + str(self.ner_dropout) + "_architecture=" + str(self.architecture)
         ploter(output_path=config.BASE_DATA_PATH,
                name=name,
                num_epochs=self.config.EPOCHS,
@@ -218,12 +220,17 @@ class NER:
 
         # preprocessing
         sentence = text.split()
+        if "finbert" in self.model_name.lower():
+            inputs = self.tokenizer.tokenize(text)
+        else:
+            inputs = self.tokenizer.encode(text)
         text = self.tokenizer.encode(text)
         tets_text = dataset.Entities_dataset(texts=[sentence],
                                              pos=[[0] * len(sentence)],
                                              tags=[[0] * len(sentence)],
                                              tokenizer=self.tokenizer,
-                                             special_tokens=self.special_tokens_dict
+                                             special_tokens=self.special_tokens_dict,
+                                             model_name=self.base_model
                                              )
         self.model_device(phase="predict", num_tag=num_tag, num_pos=num_pos)
 
@@ -257,7 +264,6 @@ class NER:
             self.model.to(self.device)
         else:
             pass
-
 
     def hyperparameters(self):
         """ This method fix the parameters and makes a filter over to exclude LayerNorm and biases """

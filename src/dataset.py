@@ -18,7 +18,8 @@ class Entities_dataset:
         - pos (np.array): part of speech array
         - tags (np.array): NER's tags array
     """
-    def __init__(self, texts, pos, tags, tokenizer, special_tokens):
+    def __init__(self, texts, pos, tags, tokenizer, special_tokens, model_name):
+        self.model_name = model_name
         self.texts = texts
         self.pos = pos
         self.tags = tags
@@ -39,10 +40,13 @@ class Entities_dataset:
 
         for i, s in enumerate(text):  # i = position, s = words
             # token id from Bert tokenizer
-            inputs = self.tokenizer.encode(
-                s,
-                add_special_tokens=False
-            )
+            if "finbert" in self.model_name.lower():
+                inputs = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(s))
+            else:
+                inputs = self.tokenizer.encode(
+                    s,
+                    add_special_tokens=False
+                )
             input_len = len(inputs)
             ids.extend(inputs)
 
