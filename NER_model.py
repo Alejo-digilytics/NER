@@ -52,6 +52,8 @@ class NER:
         self.config = config
         self.list_train_losses = []
         self.list_test_losses = []
+        self.list_tag_acc = []
+        self.list_pos_acc = []
         self.pos_std = None
         self.tag_std = None
         self.device = None
@@ -130,29 +132,44 @@ class NER:
 
         # initialize the loss
         best_loss = np.inf
+        best_tag_acc = 0
+        best_pos_acc = 0
 
         # EPOCHS
         logger.info("Starting Fine-tuning ...")
         for epoch in range(self.config.EPOCHS):
+
+            # Training
             logger.info("Start epoch {}".format(epoch+1))
             train_loss = train_val_loss.train(self.train_data_loader,
                                               self.model,
                                               self.optimizer,
                                               self.device,
                                               self.scheduler)
-            test_loss = train_val_loss.validation(self.test_data_loader,
-                                                  self.model,
-                                                  self.device)
+            test_loss,  tag_acc, pos_acc = train_val_loss.validation(self.test_data_loader,
+                                                                     self.model,
+                                                                     self.device)
+
+            # Accuracies and Losses
             logger.info("Train Loss = {}".format(train_loss))
             logger.info("Test Loss = {}".format(test_loss))
+            logger.info("Accuracy for tags is = {}".format(tag_acc))
+            logger.info("Accuracy for pos is = {}".format(pos_acc))
             self.list_train_losses.append(float(train_loss))
             self.list_test_losses.append(float(test_loss))
+            self.list_tag_acc.append(float(tag_acc))
+            self.list_pos_acc.append(float(pos_acc))
             logger.info("End epoch {}".format(epoch+1))
             logger.info("Testing epoch {}".format(epoch+1))
             if test_loss < best_loss:
                 torch.save(self.model.state_dict(), self.config.CHECKPOINTS_MODEL_PATH)
                 best_loss = test_loss
-            logger.info("End epoch {} with loss {} asnd best loss {}".format(epoch, test_loss, best_loss))
+            if pos_acc > best_pos_acc:
+                best_pos_acc = pos_acc
+            if tag_acc > best_tag_acc:
+                best_tag_acc = tag_acc
+            logger.info("End epoch {} with loss {} asnd best loss {}".format(epoch+1, test_loss, best_loss))
+
         logger.info("Fine-tuning finished")
         logger.info("With training losses: {}".format(self.list_train_losses))
         logger.info("With test losses: {}".format(self.list_test_losses))
@@ -169,6 +186,10 @@ class NER:
                **losses)
 
         # Saving results
+        data_pos = np.array(self.list_pos_acc)
+        np.savez(join(config.BASE_DATA_PATH, "pos_accuracies_" + name), data_pos)
+        data_tag = np.array(self.list_tag_acc)
+        np.savez(join(config.BASE_DATA_PATH, "tag_accuracies_" + name), data_tag)
         data1 = np.array(self.list_train_losses)
         np.savez(join(config.BASE_DATA_PATH, "train_losses_" + name), data1)
         data2 = np.array(self.list_test_losses)
@@ -204,7 +225,6 @@ class NER:
                                              tokenizer=self.tokenizer,
                                              special_tokens=self.special_tokens_dict
                                              )
-
         self.model_device(phase="predict", num_tag=num_tag, num_pos=num_pos)
 
         with torch.no_grad():
@@ -213,8 +233,9 @@ class NER:
                 data[k] = v.to(self.device).unsqueeze(0)
             tag, pos, _ = self.model(**data)
 
+            # argmax: max value axis 2 ; cpu().numpy(): convert to cuda variable
             print(self.tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
-            print(self.pos_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
+            print(self.pos_std.inverse_transform(pos.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
 
     def model_device(self, phase, num_tag, num_pos):
         """ Use GPU, load model and move it there -- device or cpu if cuda is not available """
@@ -236,42 +257,6 @@ class NER:
             self.model.to(self.device)
         else:
             pass
-
-    def test_acc(self, file_name, models_version):
-        # Loading the results
-        num_tag = np.load(join(config.BASE_DATA_PATH, "num_tag.npz"))
-        num_tag = num_tag.f.arr_0
-        num_pos = np.load(join(config.BASE_DATA_PATH, "num_pos.npz"))
-        num_pos = num_pos.f.arr_0
-        # check pos and tag
-        if self.pos_std is None:
-            std_data = joblib.load(config.CHECKPOINTS_META_PATH)
-            self.pos_std = std_data["pos_std"]
-            self.tag_std = std_data["tag_std"]
-        else:
-            pass
-        # preprocessing
-        acc_example, real_pos, real_tag, _, _ = preprocess_data_BERT(join(self.config.ACC_FILE, file_name),
-                                                                     self.encoding)
-        processed_acc_example = dataset.Entities_dataset(texts=acc_example,
-                                                         pos=real_pos,
-                                                         tags=real_tag,
-                                                         tokenizer=self.tokenizer,
-                                                         special_tokens=self.special_tokens_dict
-                                                         )
-
-        acc_dataloader = DataLoader(processed_acc_example,
-                                    batch_size=self.config.VALID_BATCH_SIZE,
-                                    num_workers=4
-                                    )
-
-        self.model_device(phase="predict", num_tag=num_tag, num_pos=num_pos)
-
-        with torch.no_grad():
-            for data in tqdm(acc_dataloader, total=len(acc_dataloader)):
-                for key, value in data.items():
-                    data[key] = value.to(self.device)
-                tag, pos, _ = self.model(**data)
 
 
     def hyperparameters(self):

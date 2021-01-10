@@ -91,7 +91,7 @@ class BERT_NER(nn.Module):
         """
         # Since this model is for NER we need to take the sequence output
         # We don't want to get a value as output but a sequence of outputs, one per token
-        # BERT output: o1
+        # BERT sequence output is the first output. Here o1
         o1, _ = self.model(ids, attention_mask=mask, token_type_ids=tokens_type_ids)
 
         if self.architecture == "simple":

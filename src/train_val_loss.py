@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import torch.nn as nn
 import torch
+import numpy as np
 
 
 def train(data_loader, model, optimizer, device, scheduler):
@@ -16,17 +17,26 @@ def train(data_loader, model, optimizer, device, scheduler):
     final_loss = 0
     # loop over the data items and print nice with tqdm
     for data in tqdm(data_loader, total=len(data_loader)):
+        # Move value to device
         for key, value in data.items():
             data[key] = value.to(device)
+
+        # Initialize the gradients
         # Always clear any previously calculated gradients before performing a BP
-        # PyTorch doesn't do it automatically because accumulating the gradients is
-        # "convenient while training RNNs"
+        # PyTorch doesn't do it automatically because accumulating the gradients is "convenient while training RNNs"
         model.zero_grad()
-        # Take care that they use the same names that in data_loader:
+
+        # Forward Propagation (loss inside the model)
+        # Take care that they use the same names that in data_loader (or **data)
         # "ids" "mask" "tokens_type_ids" "target_pos" "target_tag"
         _, _, loss = model(**data)  # Output tag pos loss
+        # Back propagation
         loss.backward()
+
+        # Update the gradients with adams
         optimizer.step()
+
+        # Update learning rate
         # Prior to PyTorch 1.1.0, scheduler of the lr was before the optimizer, now after
         scheduler.step()
         # accumulate the loss for the BP
@@ -36,17 +46,17 @@ def train(data_loader, model, optimizer, device, scheduler):
 
 def loss_function(output, target, mask, num_labels):
     """
-    This loss function is a Cross Entropy function since there is no entity overlaping
-    output:
+    This loss function is a Cross Entropy function since there is no entity overlapping
+    Input:
         - output: torch tensor, output of the last layer of the network
         - target: the tensor representing the correct class
         - mask: 
         - num_labels: Number of labels in the sequence. Maximum minus the padding
-    Input:
+    Output:
         - loss: the result of the loss function, tensor of floats?
     """
     # Cross entropy for classification
-    loss_function = nn.CrossEntropyLoss()
+    loss_funct = nn.CrossEntropyLoss()
 
     # Just for those tokens which are not padding ---> active
     active_loss = mask.view(-1) == 1
@@ -54,9 +64,9 @@ def loss_function(output, target, mask, num_labels):
     active_labels = torch.where(
         active_loss,
         target.view(-1),
-        torch.tensor(loss_function.ignore_index).type_as(target)
+        torch.tensor(loss_funct.ignore_index).type_as(target)
     )
-    loss = loss_function(active_logits, active_labels)
+    loss = loss_funct(active_logits, active_labels)
     return loss
 
 def validation(data_loader, model, device):
@@ -70,11 +80,41 @@ def validation(data_loader, model, device):
 
     # Fix a top for the loss
     final_loss = 0
+    total_tag_acc = []
+    total_pos_acc = []
     for data in tqdm(data_loader, total=len(data_loader)):
+        # Load data
         for key, val in data.items():
-            data[key] = val.to(device)
-        # we might take care that we are using the same names that in data_loader:
-        # "ids" "mask" "tokens_type_ids" "target_pos" "target_tag"
-        _, _, loss = model(**data)
+            data[
+                key] = val.to(device)
+
+        # FP and loss
+        _tag, _pos, loss = model(**data)
+
+        # Accuracy
+        target_pos = data["target_pos"].detach().cpu().numpy().reshape(-1)
+        target_tag = data["target_tag"].detach().cpu().numpy().reshape(-1)
+        pred_tag = _tag.argmax(2).cpu().numpy().reshape(-1)
+        pred_pos = _pos.argmax(2).cpu().numpy().reshape(-1)
+        comparison_tag = pred_tag == target_tag
+        comparison_pos = pred_pos == target_pos
+        matching_tag = 0
+        total_tag = len(target_tag)
+        matching_pos = 0
+        total_pos = len(target_pos)
+        for tagg in comparison_tag:
+            if tagg:
+                matching_tag += 1
+            else:
+                pass
+        for poss in comparison_pos:
+            if poss:
+                matching_pos += 1
+            else:
+                pass
+        total_tag_acc.append((matching_tag/total_tag)*100)
+        total_pos_acc.append((matching_pos/total_pos)*100)
         final_loss += loss.item()
-    return final_loss / len(data_loader)
+    tag_acc = np.array(total_tag_acc).mean()
+    pos_acc = np.array(total_pos_acc).mean()
+    return final_loss / len(data_loader), tag_acc, pos_acc
