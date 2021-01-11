@@ -40,15 +40,6 @@ class Entities_dataset:
 
         for i, s in enumerate(text):  # i = position, s = words
             # token id from Bert tokenizer
-            """
-            if "finbert" in self.model_name.lower():
-                inputs = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(s))
-            else:
-                inputs = self.tokenizer.encode(
-                    s,
-                    add_special_tokens=False
-                )
-            """
             inputs = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(s))
             input_len = len(inputs)
             ids.extend(inputs)
@@ -58,32 +49,32 @@ class Entities_dataset:
             target_pos.extend([pos[i]] * input_len)
             target_tag.extend([tags[i]] * input_len)
 
-            # Adding spacy for the special tokens
-            ids = ids[:config.MAX_LEN - 2]
-            target_pos = target_pos[:config.MAX_LEN - 2]
-            target_tag = target_tag[:config.MAX_LEN - 2]
+        # Adding spacy for the special tokens
+        ids = ids[:config.MAX_LEN - 2]
+        target_pos = target_pos[:config.MAX_LEN - 2]
+        target_tag = target_tag[:config.MAX_LEN - 2]
 
-            # CSL = 101 in BERT!!! and SEP is 102 in BERT!!
-            ids = [self.special_tokens["[CLS]"]] + ids + [self.special_tokens["[SEP]"]]
-            target_pos = [0] + target_pos + [0]
-            target_tag = [0] + target_tag + [0]
+        # CSL = 101 in BERT!!! and SEP is 102 in BERT!!
+        ids = [self.special_tokens["[CLS]"]] + ids + [self.special_tokens["[SEP]"]]
+        target_pos = [0] + target_pos + [0]
+        target_tag = [0] + target_tag + [0]
 
-            # Prepare masks: 1 means token
-            mask = [1] * len(ids)
-            tokens_type_ids = [0] * len(ids)
+        # Prepare masks: 1 means token
+        mask = [1] * len(ids)
+        tokens_type_ids = [0] * len(ids)
 
-            # PADDING FIXED, NOT DYNAMIC
-            padding_len = config.MAX_LEN - len(ids)
-            ids = ids + ([self.special_tokens["[PAD]"]] * padding_len)
-            tokens_type_ids = tokens_type_ids + ([0] * padding_len)
-            mask = mask + ([0] * padding_len)
-            target_pos = target_pos + ([0] * padding_len)
-            target_tag = target_tag + ([0] * padding_len)
+        # PADDING FIXED, NOT DYNAMIC
+        padding_len = config.MAX_LEN - len(ids)
+        ids = ids + ([self.special_tokens["[PAD]"]] * padding_len)
+        tokens_type_ids = tokens_type_ids + ([0] * padding_len)
+        mask = mask + ([0] * padding_len)
+        target_pos = target_pos + ([0] * padding_len)
+        target_tag = target_tag + ([0] * padding_len)
 
-            return {
-                "ids": torch.tensor(ids, dtype=torch.long),
-                "mask": torch.tensor(mask, dtype=torch.long),
-                "tokens_type_ids": torch.tensor(tokens_type_ids, dtype=torch.long),
-                "target_pos": torch.tensor(target_pos, dtype=torch.long),
-                "target_tag": torch.tensor(target_tag, dtype=torch.long),
+        return {
+            "ids": torch.tensor(ids, dtype=torch.long),
+            "mask": torch.tensor(mask, dtype=torch.long),
+            "tokens_type_ids": torch.tensor(tokens_type_ids, dtype=torch.long),
+            "target_pos": torch.tensor(target_pos, dtype=torch.long),
+            "target_tag": torch.tensor(target_tag, dtype=torch.long),
             }

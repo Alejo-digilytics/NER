@@ -229,11 +229,7 @@ class NER:
 
         # preprocessing
         sentence = text.split()
-        if "finbert" in self.model_name.lower():
-            inputs = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(text))
-        else:
-            inputs = self.tokenizer.encode(text)
-        text = self.tokenizer.encode(text)
+        tokenized_text = self.tokenizer.tokenize(text)
         tets_text = dataset.Entities_dataset(texts=[sentence],
                                              pos=[[0] * len(sentence)],
                                              tags=[[0] * len(sentence)],
@@ -250,8 +246,11 @@ class NER:
             tag, pos, _ = self.model(**data)
 
             # argmax: max value axis 2 ; cpu().numpy(): convert to cuda variable
-            print(self.tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
-            print(self.pos_std.inverse_transform(pos.argmax(2).cpu().numpy().reshape(-1))[:len(text)])
+            print(tokenized_text)
+            print(self.tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))
+                  [1:len(tokenized_text)])
+            print(self.pos_std.inverse_transform(pos.argmax(2).cpu().numpy().reshape(-1))
+                  [1:len(tokenized_text)])
 
     def model_device(self, phase, num_tag, num_pos):
         """ Use GPU, load model and move it there -- device or cpu if cuda is not available """
