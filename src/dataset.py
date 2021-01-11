@@ -40,6 +40,7 @@ class Entities_dataset:
 
         for i, s in enumerate(text):  # i = position, s = words
             # token id from Bert tokenizer
+            """
             if "finbert" in self.model_name.lower():
                 inputs = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(s))
             else:
@@ -47,6 +48,8 @@ class Entities_dataset:
                     s,
                     add_special_tokens=False
                 )
+            """
+            inputs = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(s))
             input_len = len(inputs)
             ids.extend(inputs)
 

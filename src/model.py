@@ -1,6 +1,7 @@
 import torch.nn as nn
+import torch
 import src.config as config
-import transformers
+#import transformers
 from src.train_val_loss import loss_function
 from pytorch_pretrained_bert import BertModel, BertConfig
 
@@ -10,8 +11,12 @@ class BERT_NER(nn.Module):
                  num_pos,
                  num_ner=0,
                  base_model="bert-base-uncased",
-                 tag_dropout=0.3, pos_dropout=0.3, ner_dropout=None,
-                 architecture="simple", ner=False, middle_layer=100):
+                 tag_dropout=0.3,
+                 pos_dropout=0.3,
+                 ner_dropout=None,
+                 architecture="simple",
+                 ner=False,
+                 middle_layer=100):
         super(BERT_NER, self).__init__()
         self.base_model = base_model
         self.architecture = architecture
@@ -20,14 +25,15 @@ class BERT_NER(nn.Module):
             self.base_model_path = config.BERT_UNCASED_PATH
         elif base_model == "bert_base_cased":
             self.base_model_path = config.BERT_CASED_PATH
-        elif base_model == "finbert_vocab_cased":
+        elif base_model == "finbert-vocab-cased":
             self.base_model_path = config.FINBERT_CASED_PATH
-        elif base_model == "finbert_vocab_uncased":
+        elif base_model == "finbert-vocab-uncased":
             self.base_model_path = config.FINBERT_UNCASED_PATH
 
         if base_model == "bert-base-uncased":
             # self.model = BertModel.from_pretrained("bert-base-uncased")
-            self.model = transformers.BertModel.from_pretrained(config.BERT_UNCASED_PATH)
+            # self.model = transformers.BertModel.from_pretrained(config.BERT_UNCASED_PATH)
+            self.model = BertModel.from_pretrained(config.BERT_UNCASED_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30522,
                                      hidden_size=768,
                                      num_hidden_layers=12,
@@ -39,6 +45,7 @@ class BERT_NER(nn.Module):
                                      max_position_embeddings=512,
                                      type_vocab_size=2,
                                      initializer_range=0.02
+
                                      )
         if base_model == "finbert-uncased":
             self.model = BertModel.from_pretrained(config.FINBERT_UNCASED_PATH)
@@ -61,7 +68,7 @@ class BERT_NER(nn.Module):
         if self.ner:
             self.num_ner = num_ner
 
-        # Extra layers for fine-tuning FeedFordward layer with 30% of dropout in both
+        # Extra layers for fine-tuning FeedForward layer with 30% of dropout in both
         self.bert_drop_1 = nn.Dropout(tag_dropout)
         self.bert_drop_2 = nn.Dropout(pos_dropout)
         if self.ner:
@@ -70,19 +77,19 @@ class BERT_NER(nn.Module):
         # Architecture
         if self.architecture == "simple":
             # 768 (BERT) composed with a linear function
-            self.out_tag = nn.Linear(768, self.num_tag)
-            self.out_pos = nn.Linear(768, self.num_pos)
+            self.out_tag = nn.Linear(self.config.hidden_size, self.num_tag)
+            self.out_pos = nn.Linear(self.config.hidden_size, self.num_pos)
             if ner:
                 self.out_pos = nn.Linear(768, self.num_ner)
 
         if self.architecture == "complex":
             # 768 (BERT) composed with a linear function
-            self.tag_mid = nn.Linear(768, middle_layer)
+            self.tag_mid = nn.Linear(self.config.hidden_size, middle_layer)
             self.out_tag = nn.Linear(middle_layer, self.num_tag)
-            self.pos_mid = nn.Linear(768,  middle_layer)
+            self.pos_mid = nn.Linear(self.config.hidden_size,  middle_layer)
             self.out_pos = nn.Linear(middle_layer, self.num_pos)
             if self.ner:
-                self.ner_mid = nn.Linear(768,  middle_layer)
+                self.ner_mid = nn.Linear(self.config.hidden_size,  middle_layer)
                 self.out_ner = nn.Linear(middle_layer, self.num_ner)
 
     def forward(self, ids, mask, tokens_type_ids, target_pos, target_tag, target_ner=None):
@@ -92,14 +99,15 @@ class BERT_NER(nn.Module):
         # Since this model is for NER we need to take the sequence output
         # We don't want to get a value as output but a sequence of outputs, one per token
         # BERT sequence output is the first output. Here o1
-        o1, _ = self.model(ids, attention_mask=mask, token_type_ids=tokens_type_ids)
+        o1, _ = self.model(input_ids=ids, token_type_ids=tokens_type_ids, attention_mask=mask)
+        o1t = o1[-1]
 
         if self.architecture == "simple":
             # Add dropouts
-            output_tag = self.bert_drop_1(o1)
-            output_pos = self.bert_drop_2(o1)
+            output_tag = self.bert_drop_1(o1t)
+            output_pos = self.bert_drop_2(o1t)
             if self.ner:
-                output_ner = self.bert_drop_3(o1)
+                output_ner = self.bert_drop_3(o1t)
 
         if self.architecture == "complex":
             # Add dropouts

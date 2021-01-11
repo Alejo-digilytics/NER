@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torch
 from transformers import AdamW, get_linear_schedule_with_warmup
-import transformers
+# import transformers
 from pytorch_pretrained_bert import BertTokenizer
 
 # Internal calls
@@ -61,7 +61,11 @@ class NER:
 
         # Fix the tokenizer and special tokens
         if base_model == "bert-base-uncased":
-            self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
+            #self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
+            self.tokenizer = BertTokenizer(vocab_file=config.BERT_UNCASED_VOCAB,
+                                           do_lower_case=True,
+                                           do_basic_tokenize=True
+                                           )
             self.special_tokens_dict = special_tokens_dict(config.BERT_UNCASED_VOCAB)
         elif base_model == "finbert-uncased":
             self.tokenizer = BertTokenizer(vocab_file=config.FINBERT_UNCASED_VOCAB,
@@ -221,7 +225,7 @@ class NER:
         # preprocessing
         sentence = text.split()
         if "finbert" in self.model_name.lower():
-            inputs = self.tokenizer.tokenize(text)
+            inputs = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(text))
         else:
             inputs = self.tokenizer.encode(text)
         text = self.tokenizer.encode(text)
