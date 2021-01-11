@@ -56,7 +56,12 @@ class NER:
         self.pos_std = None
         self.tag_std = None
         self.device = None
-        self.encoding = encoding
+        if "utf" in encoding.lower():
+            self.encoding = "utf-8"
+        elif "latin-1" in encoding.lower():
+            self.encoding = "latin-1"
+        else:
+            self.encoding = encoding
         self.base_model = base_model.replace("_", "-")
 
         # Fix the tokenizer and special tokens

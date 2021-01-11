@@ -1,7 +1,7 @@
 from NER_model import NER
 
 if __name__ == '__main__':
-    model = NER(encoding="latin-1", base_model="finbert-uncased")
+    model = NER(encoding="latin-1", base_model="bert-base-uncased")
     model.training()
     #model.test_acc("ner_dataset.csv")
 

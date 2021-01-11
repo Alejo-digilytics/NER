@@ -26,7 +26,7 @@ def check_device():
     return device
 
 
-def preprocess_data_BERT(data_path, my_encoding="utf8"):
+def preprocess_data_BERT(data_path, my_encoding="utf-8"):
     """
     This function standardizes the pos and tag columns from the dataframe
     Input:
