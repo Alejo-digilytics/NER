@@ -1,7 +1,7 @@
 from NER_model import NER
 
 if __name__ == '__main__':
-    model = NER(encoding="utf-8", base_model="bert-base-uncased")
+    model = NER(encoding="utf-8", base_model="bert-base-uncased", pos_dropout=0.2, tag_dropout=0.2)
     model.training()
     # text = "Ramakant is going to india"
     # model.predict(text)

@@ -103,8 +103,8 @@ def special_tokens_dict(vocab_path):
 
 def ploter(output_path, name, num_epochs, **losses_accuracies):
     epochs = range(num_epochs)
-    losses = {k: v for k, v in losses_accuracies.items(), if "los" in k.lower()}
-    accuracies = {k: v for k, v in losses_accuracies.items(), if "acc" in k.lower()}
+    losses = {k: v for k, v in losses_accuracies.items() if "los" in k.lower()}
+    accuracies = {k: v for k, v in losses_accuracies.items() if "acc" in k.lower()}
     ## Losses
     for key, value in losses.items():
         value = np.asarray(value)

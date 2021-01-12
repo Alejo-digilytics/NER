@@ -196,7 +196,7 @@ class NER:
         name += str(config.VALID_BATCH_SIZE) + "_train_batch=" + str(config.TRAIN_BATCH_SIZE) + "_max_len="
         name += str(config.MAX_LEN) + "_dropouts=" + str(self.tag_dropout) + "_" + str(self.pos_dropout)
         name += "_" + str(self.ner_dropout) + "_architecture=" + str(self.architecture)
-        name += '_POS:'+str(best_pos_acc)+'_TAG:'+str(best_tag_acc)
+        name += '_POS='+str(best_pos_acc)+'_TAG='+str(best_tag_acc)
         ploter(output_path=config.BASE_DATA_PATH,
                name=name,
                num_epochs=self.config.EPOCHS,

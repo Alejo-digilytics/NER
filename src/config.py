@@ -5,7 +5,7 @@ import os
 MAX_LEN = 128
 TRAIN_BATCH_SIZE = 16
 VALID_BATCH_SIZE = 8
-EPOCHS = 12
+EPOCHS = 10
 
 # PATHS
 BASE_PATH = os.getcwd()
