@@ -81,8 +81,8 @@ def validation(data_loader, model, device):
 
     # Fix a top for the loss
     final_loss = 0
-    total_tag_acc1 = []
-    total_pos_acc1 = []
+    total_tag_acc = []
+    total_pos_acc = []
     for data in tqdm(data_loader, total=len(data_loader)):
         # Load data
         for key, val in data.items():
@@ -92,38 +92,21 @@ def validation(data_loader, model, device):
         _tag, _pos, loss = model(**data)
 
         # Accuracy
-        no_padding1 = np.count_nonzero(data["ids"].detach().cpu().numpy())
-        target_pos = data["target_pos"].detach().cpu().numpy().reshape(-1)[:MAX_LEN]
-        target_tag = data["target_tag"].detach().cpu().numpy().reshape(-1)[:MAX_LEN]
-        pred_pos = _pos.argmax(2).cpu().numpy().reshape(-1)[:MAX_LEN]
-        pred_tag = _tag.argmax(2).cpu().numpy().reshape(-1)[:MAX_LEN]
-        padding_len = 0
-        no_padding = 0
-        special = 0
-        for token in target_pos:
-            if token == 0 and special >= 2:
-                padding_len += 1
-            elif token == 0 and special < 2:
-                special += 1
-            else:
-                no_padding += 1
-        comparison_tag = pred_tag[:no_padding] == target_tag[:no_padding]
-        comparison_pos = pred_pos[:no_padding] == target_pos[:no_padding]
-        matching_tag = 0
-        matching_pos = 0
-        for tagg in comparison_tag:
-            if tagg:
-                matching_tag += 1
-            else:
-                pass
-        for poss in comparison_pos:
-            if poss:
-                matching_pos += 1
-            else:
-                pass
-        total_tag_acc1.append((matching_tag / no_padding) * 100)
-        total_pos_acc1.append((matching_pos / no_padding) * 100)
+        np_ids = data["ids"].detach().cpu().numpy()
+        target_pos = data["target_pos"].detach().cpu().numpy()
+        target_tag = data["target_tag"].detach().cpu().numpy()
+        pred_pos = _pos.argmax(2).cpu().numpy()
+        pred_tag = _tag.argmax(2).cpu().numpy()
+        dim_1 = np_ids.shape[0]
+
+        # Loop over sentences
+        for i in range(dim_1):
+            real_tokens = np.count_nonzero(data["ids"].detach().cpu().numpy()[i, :])
+            comparison_tag = (pred_tag[i, :real_tokens] == target_tag[i, :real_tokens]).sum()
+            comparison_pos = (pred_pos[i, :real_tokens] == target_pos[i, :real_tokens]).sum()
+            total_tag_acc.append((comparison_tag / real_tokens) * 100)
+            total_pos_acc.append((comparison_pos / real_tokens) * 100)
         final_loss += loss.item()
-    tag_acc = np.array(total_tag_acc1).mean()
-    pos_acc = np.array(total_pos_acc1).mean()
+    tag_acc = np.array(total_tag_acc).mean()
+    pos_acc = np.array(total_pos_acc).mean()
     return final_loss / len(data_loader), tag_acc, pos_acc

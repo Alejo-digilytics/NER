@@ -90,7 +90,7 @@ def special_tokens_dict(vocab_path):
                 special_tokens_dict["[SEP]"] = position
             elif "[CLS]" in line:
                 special_tokens_dict["[CLS]"] = position
-            elif len(special_tokens_dict)==5:
+            elif len(special_tokens_dict) == 5:
                 break
             position += 1
     vocab.close()
@@ -100,15 +100,31 @@ def special_tokens_dict(vocab_path):
     outfile.close()
     return special_tokens_dict
 
+
 def ploter(output_path, name, num_epochs, **losses_accuracies):
     epochs = range(num_epochs)
-    for key, value in losses_accuracies.items():
+    losses = {k: v for k, v in losses_accuracies.items(), if "los" in k.lower()}
+    accuracies = {k: v for k, v in losses_accuracies.items(), if "acc" in k.lower()}
+    ## Losses
+    for key, value in losses.items():
         value = np.asarray(value)
-        new_color = "#"+''.join([random.choice('0123456789ABCDEF') for i in range(6)])
+        new_color = "#" + ''.join([random.choice('0123456789ABCDEF') for i in range(6)])
         plt.plot(epochs, value, marker='o', color=new_color, label=key)
-    plt.ylabel(" ".join(list(losses_accuracies.keys())) + " Losses")
+    plt.ylabel(" ".join(list(losses.keys())) + " Losses")
     plt.xlabel("Number of epochs")
     plt.legend()
-    plt.title(" vs ".join([key for key in losses_accuracies.keys()]))
-    plt.savefig(os.path.join(output_path, name + '.png'))
+    plt.title(" vs ".join([key for key in losses.keys()]))
+    plt.savefig(os.path.join(output_path, name + "_losses_" + '.png'))
+    plt.show()
+
+    ## Accuracies
+    for key, value in accuracies.items():
+        value = np.asarray(value)
+        new_color = "#" + ''.join([random.choice('0123456789ABCDEF') for i in range(6)])
+        plt.plot(epochs, value, marker='o', color=new_color, label=key)
+    plt.ylabel(" ".join(list(accuracies.keys())) + " Accuracies")
+    plt.xlabel("Number of epochs")
+    plt.legend()
+    plt.title(" vs ".join([key for key in accuracies.keys()]))
+    plt.savefig(os.path.join(output_path, name + "_accuracy_" + '.png'))
     plt.show()
