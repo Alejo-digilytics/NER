@@ -12,6 +12,9 @@ class BERT_NER(nn.Module):
                  tag_dropout=0.3,
                  pos_dropout=0.3,
                  ner_dropout=None,
+                 tag_dropout_2=0.3,
+                 pos_dropout_2=0.3,
+                 ner_dropout_2=None,
                  architecture="simple",
                  ner=False,
                  middle_layer=100):
@@ -66,7 +69,7 @@ class BERT_NER(nn.Module):
         if self.ner:
             self.num_ner = num_ner
 
-        # Extra layers for fine-tuning FeedForward layer with 30% of dropout in both
+        # Extra layers for fine-tuning FeedForward layer with dropout
         self.bert_drop_1 = nn.Dropout(tag_dropout)
         self.bert_drop_2 = nn.Dropout(pos_dropout)
         if self.ner:
@@ -83,11 +86,14 @@ class BERT_NER(nn.Module):
         if self.architecture == "complex":
             # 768 (BERT) composed with a linear function
             self.tag_mid = nn.Linear(self.config.hidden_size, middle_layer)
+            self.bert_drop_1_2 = nn.Dropout(tag_dropout_2)
             self.out_tag = nn.Linear(middle_layer, self.num_tag)
             self.pos_mid = nn.Linear(self.config.hidden_size,  middle_layer)
+            self.bert_drop_2_2 = nn.Dropout(pos_dropout_2)
             self.out_pos = nn.Linear(middle_layer, self.num_pos)
             if self.ner:
                 self.ner_mid = nn.Linear(self.config.hidden_size,  middle_layer)
+                self.bert_drop_3_2 = nn.Dropout(ner_dropout_2)
                 self.out_ner = nn.Linear(middle_layer, self.num_ner)
 
     def forward(self, ids, mask, tokens_type_ids, target_pos, target_tag, target_ner=None):
@@ -109,15 +115,19 @@ class BERT_NER(nn.Module):
 
         if self.architecture == "complex":
             # Add dropouts
-            output_tag1 = self.bert_drop_1(o1)
-            output_pos1 = self.bert_drop_2(o1)
+            output_tag1 = self.bert_drop_1(o1t)
+            output_pos1 = self.bert_drop_2(o1t)
             if self.ner:
-                output_ner1 = self.bert_drop_3(o1)
+                output_ner1 = self.bert_drop_3(o1t)
             # Add middle layer
-            output_tag = self.tag_mid(output_tag1)
-            output_pos = self.pos_mid(output_pos1)
+            output_tag_2 = self.tag_mid(output_tag1)
+            output_pos_2 = self.pos_mid(output_pos1)
             if self.ner:
-                output_ner = self.ner_mid(output_ner1)
+                output_ner_2 = self.ner_mid(output_ner1)
+            output_tag = self.bert_drop_1_2(output_tag_2)
+            output_pos = self.bert_drop_2_2(output_pos_2)
+            if self.ner:
+                output_ner = self.bert_drop_3_2(output_ner_2)
 
         # We add the linear outputs
         tag = self.out_tag(output_tag)

@@ -35,6 +35,7 @@ logger.addHandler(handler)
 class NER:
     def __init__(self, encoding, base_model="bert-base-uncased",
                  num_ner=0, tag_dropout=0.3, pos_dropout=0.3, ner_dropout=None,
+                 tag_dropout_2=0.3, pos_dropout_2=0.3, ner_dropout_2=None,
                  architecture="simple", ner=False, middle_layer=None
                  ):
         """ There are only two base_model options allowed: "bert-base-uncased" and "finbert-uncased" """
@@ -46,6 +47,9 @@ class NER:
         self.middle_layer = middle_layer
         self.tag_dropout = tag_dropout
         self.pos_dropout = pos_dropout
+        self.tag_dropout_2 = tag_dropout_2
+        self.pos_dropout_2 = pos_dropout_2
+        self.ner_dropout_2 = ner_dropout_2
 
         # configuration
         self.config = config
@@ -264,6 +268,9 @@ class NER:
                               tag_dropout=self.tag_dropout,
                               pos_dropout=self.pos_dropout,
                               ner_dropout=self.ner_dropout,
+                              tag_dropout_2 = self.tag_dropout_2,
+                              pos_dropout_2 = self.pos_dropout_2,
+                              ner_dropout_2 = self.ner_dropout_2,
                               architecture=self.architecture,
                               ner=self.ner,
                               middle_layer=self.middle_layer)
