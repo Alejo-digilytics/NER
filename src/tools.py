@@ -8,6 +8,18 @@ import numpy as np
 import random
 
 
+def test_accuracy(model, test_data_loader, device):
+    test_accuracy = []
+    for batch in test_data_loader:
+        ids, mask, labels = tuple(t.to(device) for t in batch)
+        with torch.no_grad():
+            logits = model(ids, mask)
+
+        preds = torch.argmax(logits, dim=1).flatten()
+        accuracy = (preds == labels).cpu().np.mean() * 100
+        test_accuracy.append(accuracy)
+
+
 def check_device():
     """
     This function checks the cuda's setting. It prints the setting

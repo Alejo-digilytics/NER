@@ -1,10 +1,10 @@
 from NER_model import NER
 
 if __name__ == '__main__':
-    model = NER(encoding="latin-1", base_model="bert-base-uncased")
-    # model.training()
-    text = "alejo is going to india"
-    model.predict(text)
+    model = NER(encoding="utf-8", base_model="bert-base-uncased")
+    model.training()
+    # text = "Ramakant is going to india"
+    # model.predict(text)
 
 
     """

@@ -1,7 +1,5 @@
 import torch.nn as nn
-import torch
 import src.config as config
-#import transformers
 from src.train_val_loss import loss_function
 from pytorch_pretrained_bert import BertModel, BertConfig
 
