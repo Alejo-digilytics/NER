@@ -186,7 +186,8 @@ class NER:
         logger.info("With test losses: {}".format(self.list_test_losses))
 
         # plotting
-        losses = {"train": self.list_train_losses, "test": self.list_test_losses}
+        losses_accuracies = {"Tag accuracy": self.list_tag_acc, "Pos accuracy": self.list_pos_acc,
+                             "train loss": self.list_train_losses, "test loss": self.list_test_losses}
         name = "model=" + self.base_model + "_epochs=" + str(config.EPOCHS) + "_test_batch="
         name += str(config.VALID_BATCH_SIZE) + "_train_batch=" + str(config.TRAIN_BATCH_SIZE) + "_max_len="
         name += str(config.MAX_LEN) + "_dropouts=" + str(self.tag_dropout) + "_" + str(self.pos_dropout)
@@ -194,7 +195,7 @@ class NER:
         ploter(output_path=config.BASE_DATA_PATH,
                name=name,
                num_epochs=self.config.EPOCHS,
-               **losses)
+               **losses_accuracies)
 
         # Saving results
         data_pos = np.array(self.list_pos_acc)

@@ -57,6 +57,7 @@ def preprocess_data_BERT(data_path, my_encoding="utf-8"):
     # Get columns names and fill possible Nan values
     cols = df.columns.tolist()
     df[cols[0]] = df[cols[0]].fillna(method="ffill")
+    # df.to_csv("processed_df_K.csv")
 
     # Encoding tags and pos for preprocessing, which will be added as columns
     tag_std = prep.LabelEncoder()
@@ -99,15 +100,15 @@ def special_tokens_dict(vocab_path):
     outfile.close()
     return special_tokens_dict
 
-def ploter(output_path, name, num_epochs, **losses):
+def ploter(output_path, name, num_epochs, **losses_accuracies):
     epochs = range(num_epochs)
-    for key, value in losses.items():
+    for key, value in losses_accuracies.items():
         value = np.asarray(value)
         new_color = "#"+''.join([random.choice('0123456789ABCDEF') for i in range(6)])
-        plt.plot(epochs, value, marker='o', color=new_color, label=key+" acc")
-    plt.ylabel(" ".join(list(losses.keys())) + " Losses")
+        plt.plot(epochs, value, marker='o', color=new_color, label=key)
+    plt.ylabel(" ".join(list(losses_accuracies.keys())) + " Losses")
     plt.xlabel("Number of epochs")
     plt.legend()
-    plt.title(" vs ".join([key for key in losses.keys()]))
+    plt.title(" vs ".join([key for key in losses_accuracies.keys()]))
     plt.savefig(os.path.join(output_path, name + '.png'))
     plt.show()
