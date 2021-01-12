@@ -102,6 +102,10 @@ class NER:
         # Save the number of cases per class
         num_tag = len(list(self.tag_std.classes_))
         num_pos = len(list(self.pos_std.classes_))
+        data4 = np.array(num_pos)
+        np.savez(join(config.BASE_DATA_PATH, "num_pos"), data4)
+        data3 = np.array(num_tag)
+        np.savez(join(config.BASE_DATA_PATH, "num_tag"), data3)
 
         # Split training set with skl
         logger.info(" Splitting data and creating data sets ...")
@@ -191,7 +195,8 @@ class NER:
         name = "model=" + self.base_model + "_epochs=" + str(config.EPOCHS) + "_test_batch="
         name += str(config.VALID_BATCH_SIZE) + "_train_batch=" + str(config.TRAIN_BATCH_SIZE) + "_max_len="
         name += str(config.MAX_LEN) + "_dropouts=" + str(self.tag_dropout) + "_" + str(self.pos_dropout)
-        name += "_" + str(self.pos_dropout) + "_" + str(self.ner_dropout) + "_architecture=" + str(self.architecture)
+        name += "_" + str(self.ner_dropout) + "_architecture=" + str(self.architecture)
+        name += '_POS:'+str(best_pos_acc)+'_TAG:'+str(best_tag_acc)
         ploter(output_path=config.BASE_DATA_PATH,
                name=name,
                num_epochs=self.config.EPOCHS,
@@ -206,10 +211,6 @@ class NER:
         np.savez(join(config.BASE_DATA_PATH, "train_losses_" + name), data1)
         data2 = np.array(self.list_test_losses)
         np.savez(join(config.BASE_DATA_PATH, "test_losses_" + name), data2)
-        data4 = np.array(num_pos)
-        np.savez(join(config.BASE_DATA_PATH, "num_pos"), data4)
-        data3 = np.array(num_tag)
-        np.savez(join(config.BASE_DATA_PATH, "num_tag"), data3)
         return best_loss
 
     def predict(self, text):

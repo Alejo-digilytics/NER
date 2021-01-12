@@ -92,7 +92,7 @@ def validation(data_loader, model, device):
         _tag, _pos, loss = model(**data)
 
         # Accuracy
-        print(len(data))
+        no_padding1 = np.count_nonzero(data["ids"].detach().cpu().numpy())
         target_pos = data["target_pos"].detach().cpu().numpy().reshape(-1)[:MAX_LEN]
         target_tag = data["target_tag"].detach().cpu().numpy().reshape(-1)[:MAX_LEN]
         pred_pos = _pos.argmax(2).cpu().numpy().reshape(-1)[:MAX_LEN]
