@@ -54,7 +54,7 @@ class Entities_dataset:
         target_pos = target_pos[:config.MAX_LEN - 2]
         target_tag = target_tag[:config.MAX_LEN - 2]
 
-        # CSL = 101 in BERT!!! and SEP is 102 in BERT!!
+        # adding CLS and SEP ids and padding the tags
         ids = [self.special_tokens["[CLS]"]] + ids + [self.special_tokens["[SEP]"]]
         target_pos = [0] + target_pos + [0]
         target_tag = [0] + target_tag + [0]

@@ -8,24 +8,8 @@ import numpy as np
 import random
 
 
-def test_accuracy(model, test_data_loader, device):
-    test_accuracy = []
-    for batch in test_data_loader:
-        ids, mask, labels = tuple(t.to(device) for t in batch)
-        with torch.no_grad():
-            logits = model(ids, mask)
-
-        preds = torch.argmax(logits, dim=1).flatten()
-        accuracy = (preds == labels).cpu().np.mean() * 100
-        test_accuracy.append(accuracy)
-
-
 def check_device():
-    """
-    This function checks the cuda's setting. It prints the setting
-    Output:
-        - device: the device object for torch to load the model into
-    """
+    """ This function checks the cuda's setting. It prints the setting. """
     if torch.cuda.is_available():
         device = torch.device("cuda")
         print('There are %d GPU(s) available.' % torch.cuda.device_count())
@@ -76,6 +60,8 @@ def preprocess_data_BERT(data_path, my_encoding="utf-8"):
 
 
 def special_tokens_dict(vocab_path):
+    """ This function creates a dictionary of special tokens based on the vocab.txt from each model """
+
     special_tokens_dict = {}
     position = 0
     with open(vocab_path, "r") as vocab:
@@ -102,10 +88,18 @@ def special_tokens_dict(vocab_path):
 
 
 def ploter(output_path, name, num_epochs, **losses_accuracies):
+    """ Given a dictionary of losses and accuracies plots and saves the graphics for both with random colours.
+    Inputs:
+        - output_path (str): path to save the plots
+        - name (str): name of the plots containing the model's name and hyperparameters
+        - num_epochs (int): number of epochs for the x axis
+        - losses_accuracies (dict): dictionary with the names of the curves and their values
+    """
     epochs = range(num_epochs)
     losses = {k: v for k, v in losses_accuracies.items() if "los" in k.lower()}
     accuracies = {k: v for k, v in losses_accuracies.items() if "acc" in k.lower()}
-    ## Losses
+
+    # Losses
     for key, value in losses.items():
         value = np.asarray(value)
         new_color = "#" + ''.join([random.choice('0123456789ABCDEF') for i in range(6)])
@@ -117,7 +111,7 @@ def ploter(output_path, name, num_epochs, **losses_accuracies):
     plt.savefig(os.path.join(output_path, name + "_losses_" + '.png'))
     plt.show()
 
-    ## Accuracies
+    # Accuracies
     for key, value in accuracies.items():
         value = np.asarray(value)
         new_color = "#" + ''.join([random.choice('0123456789ABCDEF') for i in range(6)])

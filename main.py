@@ -6,12 +6,7 @@ if __name__ == '__main__':
                 pos_dropout_2=0.3, tag_dropout_2=0.3,
                 architecture="complex", middle_layer=100)
     model.training()
-    # text = "Ramakant is going to india"
-    # model.predict(text)
-
-
     """
-    
     model.predict(" Contact tel 03457 60 60 60 see reverse for call times Text phone 03457 125 563"
                   "used by deaf or speech impaired customers"
                   "www.hsbc.co.uk"

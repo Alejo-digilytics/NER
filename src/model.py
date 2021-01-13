@@ -19,6 +19,7 @@ class BERT_NER(nn.Module):
                  ner=False,
                  middle_layer=100):
         super(BERT_NER, self).__init__()
+
         self.base_model = base_model
         self.architecture = architecture
         self.ner = ner
@@ -32,8 +33,6 @@ class BERT_NER(nn.Module):
             self.base_model_path = config.FINBERT_UNCASED_PATH
 
         if base_model == "bert-base-uncased":
-            # self.model = BertModel.from_pretrained("bert-base-uncased")
-            # self.model = transformers.BertModel.from_pretrained(config.BERT_UNCASED_PATH)
             self.model = BertModel.from_pretrained(config.BERT_UNCASED_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30522,
                                      hidden_size=768,
@@ -46,8 +45,8 @@ class BERT_NER(nn.Module):
                                      max_position_embeddings=512,
                                      type_vocab_size=2,
                                      initializer_range=0.02
-
                                      )
+
         if base_model == "finbert-uncased":
             self.model = BertModel.from_pretrained(config.FINBERT_UNCASED_PATH)
             self.config = BertConfig(vocab_size_or_config_json_file=30873,
@@ -69,11 +68,11 @@ class BERT_NER(nn.Module):
         if self.ner:
             self.num_ner = num_ner
 
-        # Extra layers for fine-tuning FeedForward layer with dropout
-        self.bert_drop_1 = nn.Dropout(tag_dropout)
-        self.bert_drop_2 = nn.Dropout(pos_dropout)
+        # First dropout
+        self.bert_drop_tag_1 = nn.Dropout(tag_dropout)
+        self.bert_drop_pos_1 = nn.Dropout(pos_dropout)
         if self.ner:
-            self.bert_drop_3 = nn.Dropout(ner_dropout)
+            self.bert_drop_ner_1 = nn.Dropout(ner_dropout)
 
         # Architecture
         if self.architecture == "simple":
@@ -86,14 +85,14 @@ class BERT_NER(nn.Module):
         if self.architecture == "complex":
             # 768 (BERT) composed with a linear function
             self.tag_mid = nn.Linear(self.config.hidden_size, middle_layer)
-            self.bert_drop_1_2 = nn.Dropout(tag_dropout_2)
+            self.bert_drop_tag_2 = nn.Dropout(tag_dropout_2)
             self.out_tag = nn.Linear(middle_layer, self.num_tag)
             self.pos_mid = nn.Linear(self.config.hidden_size,  middle_layer)
-            self.bert_drop_2_2 = nn.Dropout(pos_dropout_2)
+            self.bert_drop_pos_2 = nn.Dropout(pos_dropout_2)
             self.out_pos = nn.Linear(middle_layer, self.num_pos)
             if self.ner:
                 self.ner_mid = nn.Linear(self.config.hidden_size,  middle_layer)
-                self.bert_drop_3_2 = nn.Dropout(ner_dropout_2)
+                self.bert_drop_ner_2 = nn.Dropout(ner_dropout_2)
                 self.out_ner = nn.Linear(middle_layer, self.num_ner)
 
     def forward(self, ids, mask, tokens_type_ids, target_pos, target_tag, target_ner=None):
@@ -106,28 +105,33 @@ class BERT_NER(nn.Module):
         o1, _ = self.model(input_ids=ids, token_type_ids=tokens_type_ids, attention_mask=mask)
         o1t = o1[-1]
 
+        # Simple architecture
         if self.architecture == "simple":
-            # Add dropouts
-            output_tag = self.bert_drop_1(o1t)
-            output_pos = self.bert_drop_2(o1t)
+            output_tag = self.bert_drop_tag_1(o1t)
+            output_pos = self.bert_drop_pos_1(o1t)
             if self.ner:
-                output_ner = self.bert_drop_3(o1t)
+                output_ner = self.bert_drop_ner_1(o1t)
 
+        # Complex architecture
         if self.architecture == "complex":
+
             # Add dropouts
-            output_tag1 = self.bert_drop_1(o1t)
-            output_pos1 = self.bert_drop_2(o1t)
+            output_tag1 = self.bert_drop_tag_1(o1t)
+            output_pos1 = self.bert_drop_pos_1(o1t)
             if self.ner:
-                output_ner1 = self.bert_drop_3(o1t)
+                output_ner1 = self.bert_drop_ner_1(o1t)
+
             # Add middle layer
             output_tag_2 = self.tag_mid(output_tag1)
             output_pos_2 = self.pos_mid(output_pos1)
             if self.ner:
                 output_ner_2 = self.ner_mid(output_ner1)
-            output_tag = self.bert_drop_1_2(output_tag_2)
-            output_pos = self.bert_drop_2_2(output_pos_2)
+
+            # Add second dropout
+            output_tag = self.bert_drop_tag_2(output_tag_2)
+            output_pos = self.bert_drop_pos_2(output_pos_2)
             if self.ner:
-                output_ner = self.bert_drop_3_2(output_ner_2)
+                output_ner = self.bert_drop_ner_2(output_ner_2)
 
         # We add the linear outputs
         tag = self.out_tag(output_tag)

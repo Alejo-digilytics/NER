@@ -6,7 +6,6 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torch
 from transformers import AdamW, get_linear_schedule_with_warmup
-# import transformers
 from pytorch_pretrained_bert import BertTokenizer
 
 # Internal calls
@@ -20,7 +19,6 @@ from os.path import join
 import joblib
 import logging
 import sys
-from tqdm import tqdm
 
 formatter = logging.Formatter('%(asctime)s %(levelname)s_%(name)s: %(message)s')
 logging.basicConfig(filename='fine_tune.log', level=logging.DEBUG)
@@ -53,24 +51,31 @@ class NER:
 
         # configuration
         self.config = config
+
+        # Accuracies and Losses
         self.list_train_losses = []
         self.list_test_losses = []
         self.list_tag_acc = []
         self.list_pos_acc = []
+
+        # std means standardized, in our case the tags are replaced by integers for the classification
         self.pos_std = None
         self.tag_std = None
         self.device = None
+
+        # define the encoding of the dataframe
         if "utf" in encoding.lower():
             self.encoding = "utf-8"
         elif "latin-1" in encoding.lower():
             self.encoding = "latin-1"
         else:
             self.encoding = encoding
+
+        # be sure the model's name follows the correct structure
         self.base_model = base_model.replace("_", "-")
 
         # Fix the tokenizer and special tokens
         if base_model == "bert-base-uncased":
-            #self.tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
             self.tokenizer = BertTokenizer(vocab_file=config.BERT_UNCASED_VOCAB,
                                            do_lower_case=True,
                                            do_basic_tokenize=True
@@ -83,16 +88,13 @@ class NER:
             self.special_tokens_dict = special_tokens_dict(config.FINBERT_UNCASED_VOCAB)
 
     def training(self, saving=True):
-        logger.info("preprocessing data ...")
-
-        # We preprocess and normalize the data and output it as np.arrays/ pd.series
-
+        logger.info("Preprocessing data ...")
+        # We preprocess and normalize (as categories) the data and output it as np.arrays/ pd.series
         sentences, pos, tag, self.pos_std, self.tag_std = preprocess_data_BERT(self.config.TRAINING_FILE,
                                                                                self.encoding)
-
         logger.info("Data has been preprocessed")
 
-        # Checkpoint for the standardized pos and tag
+        # Checkpoint for the standardized pos and tag. tag <-> integer value
         logger.info("Making checkpoint for the preprocessed data ...")
         if saving:
             data_check_pt = {
@@ -103,7 +105,7 @@ class NER:
         else:
             pass
 
-        # Save the number of cases per class
+        # Save the number of classes per classification problem
         num_tag = len(list(self.tag_std.classes_))
         num_pos = len(list(self.pos_std.classes_))
         data4 = np.array(num_pos)
@@ -144,7 +146,7 @@ class NER:
                                            num_workers=4
                                            )
 
-        # Load tensor to device and hyperparameters
+        # Load model to device and hyperparameters
         logger.info("Moving model to cuda ...")
         self.model_device(phase="train", num_tag=num_tag, num_pos=num_pos)
         self.hyperparameters()
@@ -200,7 +202,7 @@ class NER:
         name += str(config.VALID_BATCH_SIZE) + "_train_batch=" + str(config.TRAIN_BATCH_SIZE) + "_max_len="
         name += str(config.MAX_LEN) + "_dropouts=" + str(self.tag_dropout) + "_" + str(self.pos_dropout)
         name += "_" + str(self.ner_dropout) + "_architecture=" + str(self.architecture)
-        name += '_POS='+str(best_pos_acc)+'_TAG='+str(best_tag_acc)
+        name += '_POS=' + str(best_pos_acc) + '_TAG=' + str(best_tag_acc)
         ploter(output_path=config.BASE_DATA_PATH,
                name=name,
                num_epochs=self.config.EPOCHS,
@@ -218,6 +220,7 @@ class NER:
         return best_loss
 
     def predict(self, text):
+        """ Given a example text it predicts and prints the tokens and their labels for tag and pos"""
 
         # Loading the results
         num_tag = np.load(join(config.BASE_DATA_PATH, "num_tag.npz"))
@@ -235,7 +238,11 @@ class NER:
 
         # preprocessing
         sentence = text.split()
+
+        # tokenizing
         tokenized_text = self.tokenizer.tokenize(text)
+
+        # converting into iterable input for the model
         tets_text = dataset.Entities_dataset(texts=[sentence],
                                              pos=[[0] * len(sentence)],
                                              tags=[[0] * len(sentence)],
@@ -243,6 +250,8 @@ class NER:
                                              special_tokens=self.special_tokens_dict,
                                              model_name=self.base_model
                                              )
+
+        # move model to device and fix not update for the gradients since it is a prediction
         self.model_device(phase="predict", num_tag=num_tag, num_pos=num_pos)
 
         with torch.no_grad():
@@ -251,12 +260,12 @@ class NER:
                 data[k] = v.to(self.device).unsqueeze(0)
             tag, pos, _ = self.model(**data)
 
-            # argmax: max value axis 2 ; cpu().numpy(): convert to cuda variable
+            # argmax: max value axis 2, the distribution ; cpu().numpy(): convert to cuda variable
             print(tokenized_text)
             print(self.tag_std.inverse_transform(tag.argmax(2).cpu().numpy().reshape(-1))
-                  [1:len(tokenized_text)+1])
+                  [1:len(tokenized_text) + 1])
             print(self.pos_std.inverse_transform(pos.argmax(2).cpu().numpy().reshape(-1))
-                  [1:len(tokenized_text)+1])
+                  [1:len(tokenized_text) + 1])
 
     def model_device(self, phase, num_tag, num_pos):
         """ Use GPU, load model and move it there -- device or cpu if cuda is not available """
@@ -268,9 +277,9 @@ class NER:
                               tag_dropout=self.tag_dropout,
                               pos_dropout=self.pos_dropout,
                               ner_dropout=self.ner_dropout,
-                              tag_dropout_2 = self.tag_dropout_2,
-                              pos_dropout_2 = self.pos_dropout_2,
-                              ner_dropout_2 = self.ner_dropout_2,
+                              tag_dropout_2=self.tag_dropout_2,
+                              pos_dropout_2=self.pos_dropout_2,
+                              ner_dropout_2=self.ner_dropout_2,
                               architecture=self.architecture,
                               ner=self.ner,
                               middle_layer=self.middle_layer)

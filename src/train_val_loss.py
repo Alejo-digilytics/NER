@@ -2,7 +2,6 @@ from tqdm import tqdm
 import torch.nn as nn
 import torch
 import numpy as np
-from src.config import MAX_LEN
 
 
 def train(data_loader, model, optimizer, device, scheduler):
@@ -22,24 +21,25 @@ def train(data_loader, model, optimizer, device, scheduler):
         for key, value in data.items():
             data[key] = value.to(device)
 
-        # Initialize the gradients
+        # Initialize the gradients with zeros
         # Always clear all previously calculated gradients before performing a BP
         # PyTorch doesn't do it automatically because accumulating the gradients is "convenient while training RNNs"
         model.zero_grad()
 
         # Forward Propagation (loss inside the model)
-        # Take care that they use the same names that in data_loader (or **data)
-        # "ids" "mask" "tokens_type_ids" "target_pos" "target_tag"
-        _, _, loss = model(**data)  # Output tag pos loss
+        # Take care that they use the same names or order: "ids" "mask" "tokens_type_ids" "target_pos" "target_tag"
+        _, _, loss = model(**data)
+
         # Back propagation
         loss.backward()
 
-        # Update the gradients with adams
+        # Update the gradients with adamsW (fixed in hyperparameters method)
         optimizer.step()
 
         # Update learning rate
         # Prior to PyTorch 1.1.0, scheduler of the lr was before the optimizer, now after
         scheduler.step()
+
         # accumulate the loss for the BP
         final_loss += loss.item()
     return final_loss / len(data_loader)
@@ -72,7 +72,8 @@ def loss_function(output, target, mask, num_labels):
 
 
 def validation(data_loader, model, device):
-    """
+    """ Computes loss and accuracy for the test set
+    Input:
         -  data_loader: pytorch.DataLoader object
         -  model: BERT or another
         -  device: cuda if possible, also gpu or cpu
@@ -84,6 +85,7 @@ def validation(data_loader, model, device):
     total_tag_acc = []
     total_pos_acc = []
     for data in tqdm(data_loader, total=len(data_loader)):
+
         # Load data
         for key, val in data.items():
             data[key] = val.to(device)
@@ -99,7 +101,7 @@ def validation(data_loader, model, device):
         pred_tag = _tag.argmax(2).cpu().numpy()
         dim_1 = np_ids.shape[0]
 
-        # Loop over sentences
+        # Loop over sentences to compute accuracy per sentence
         for i in range(dim_1):
             real_tokens = np.count_nonzero(data["ids"].detach().cpu().numpy()[i, :])
             comparison_tag = (pred_tag[i, :real_tokens] == target_tag[i, :real_tokens]).sum()
