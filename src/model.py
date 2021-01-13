@@ -102,24 +102,27 @@ class BERT_NER(nn.Module):
         # Since this model is for NER we need to take the sequence output
         # We don't want to get a value as output but a sequence of outputs, one per token
         # BERT sequence output is the first output. Here o1
-        o1, _ = self.model(input_ids=ids, token_type_ids=tokens_type_ids, attention_mask=mask)
-        o1t = o1[-1]
+        o1, _ = self.model(input_ids=ids,
+                           token_type_ids=tokens_type_ids,
+                           attention_mask=mask,
+                           output_all_encoded_layers=False
+                           )
 
         # Simple architecture
         if self.architecture == "simple":
-            output_tag = self.bert_drop_tag_1(o1t)
-            output_pos = self.bert_drop_pos_1(o1t)
+            output_tag = self.bert_drop_tag_1(o1)
+            output_pos = self.bert_drop_pos_1(o1)
             if self.ner:
-                output_ner = self.bert_drop_ner_1(o1t)
+                output_ner = self.bert_drop_ner_1(o1)
 
         # Complex architecture
         if self.architecture == "complex":
 
             # Add dropouts
-            output_tag1 = self.bert_drop_tag_1(o1t)
-            output_pos1 = self.bert_drop_pos_1(o1t)
+            output_tag1 = self.bert_drop_tag_1(o1)
+            output_pos1 = self.bert_drop_pos_1(o1)
             if self.ner:
-                output_ner1 = self.bert_drop_ner_1(o1t)
+                output_ner1 = self.bert_drop_ner_1(o1)
 
             # Add middle layer
             output_tag_2 = self.tag_mid(output_tag1)
