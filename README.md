@@ -16,7 +16,7 @@ The BERT-like model must be added in the folder models containing the following 
 
 To use this repository you must verify the requirements listed in requirements.txt
 This can be done moving to the working directory and running the following command on terminal 
-`pip install -r requiremnts.txt`
+`pip install -r requirements.txt`
 
 
 One of the libraries used here is pytorch.
